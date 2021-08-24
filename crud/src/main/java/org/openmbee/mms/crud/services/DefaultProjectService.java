@@ -25,6 +25,7 @@ import org.openmbee.mms.json.RefType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -32,6 +33,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service("defaultProjectService")
+@Primary
 public class DefaultProjectService implements ProjectService {
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());

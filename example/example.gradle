@@ -26,6 +26,7 @@ dependencies {
         project(':search'),
         project(':storage'),
         project(':groups'),
+        project(':elp'),
         'org.springframework.boot:spring-boot-starter-web',
         'org.postgresql:postgresql:42.2.5',
         //'mysql:mysql-connector-java:8.0.17',

@@ -40,7 +40,7 @@ jobs:
             docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run artifacts.postman_collection.json -e test-env.json --delay-request 500
             docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run elastic.postman_collection.json -e test-env.json --delay-request 500
             docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run groups.postman_collection.json -e test-env.json --delay-request 500
-
+            docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run permissions_elp.postman_collection.json -e test-env.json --delay-request 500
       - persist_to_workspace:
             root: /home/circleci/
             paths:

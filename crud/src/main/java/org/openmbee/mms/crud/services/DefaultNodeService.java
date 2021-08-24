@@ -34,6 +34,7 @@ import org.openmbee.mms.json.CommitJson;
 import org.openmbee.mms.json.ElementJson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -52,9 +53,9 @@ public class DefaultNodeService implements NodeService {
     protected NodeIndexDAO nodeIndex;
     //to save to this use base json classes
     protected CommitIndexDAO commitIndex;
-    protected NodeGetHelper nodeGetHelper;
-    protected NodePostHelper nodePostHelper;
-    protected NodeDeleteHelper nodeDeleteHelper;
+    protected ObjectFactory<NodeGetHelper> nodeGetHelperFactory;
+    protected ObjectFactory<NodePostHelper> nodePostHelperFactory;
+    protected ObjectFactory<NodeDeleteHelper> nodeDeleteHelperFactory;
 
     protected Collection<EventService> eventPublisher;
 
@@ -79,18 +80,30 @@ public class DefaultNodeService implements NodeService {
     }
 
     @Autowired
-    public void setNodePostHelper(NodePostHelper nodePostHelper) {
-        this.nodePostHelper = nodePostHelper;
+    public void setNodePostHelperFactory(ObjectFactory<NodePostHelper> nodePostHelperFactory) {
+        this.nodePostHelperFactory = nodePostHelperFactory;
+    }
+
+    public NodePostHelper getNodePostHelper() {
+        return this.nodePostHelperFactory.getObject();
     }
 
     @Autowired
-    public void setNodeDeleteHelper(NodeDeleteHelper nodeDeleteHelper) {
-        this.nodeDeleteHelper = nodeDeleteHelper;
+    public void setNodeDeleteHelperFactory(ObjectFactory<NodeDeleteHelper> nodeDeleteHelperFactory) {
+        this.nodeDeleteHelperFactory = nodeDeleteHelperFactory;
+    }
+
+    public NodeDeleteHelper getNodeDeleteHelper() {
+        return this.nodeDeleteHelperFactory.getObject();
     }
 
     @Autowired
-    public void setNodeGetHelper(NodeGetHelper nodeGetHelper) {
-        this.nodeGetHelper = nodeGetHelper;
+    public void setNodeGetHelperFactory(ObjectFactory<NodeGetHelper> nodeGetHelperFactory) {
+        this.nodeGetHelperFactory = nodeGetHelperFactory;
+    }
+
+    public NodeGetHelper getNodeGetHelper() {
+        return this.nodeGetHelperFactory.getObject();
     }
 
     @Autowired
@@ -127,7 +140,7 @@ public class DefaultNodeService implements NodeService {
                 } else {
                     stream.write(sep.getBytes(StandardCharsets.UTF_8));
                 }
-                Collection<ElementJson> result = nodeGetHelper.processGetJsonFromNodes(ns, commitId, this)
+                Collection<ElementJson> result = getNodeGetHelper().processGetJsonFromNodes(ns, commitId, this)
                     .getActiveElementMap().values();
                 stream.write(result.stream().map(this::toJson).collect(Collectors.joining(sep))
                     .getBytes(StandardCharsets.UTF_8));
@@ -161,7 +174,7 @@ public class DefaultNodeService implements NodeService {
 
             ElementsResponse response = new ElementsResponse();
             String commitId = params.getOrDefault("commitId", null);
-            response.getElements().addAll(nodeGetHelper.processGetAll(commitId, this));
+            response.getElements().addAll(getNodeGetHelper().processGetAll(commitId, this));
             return response;
         }
     }
@@ -173,7 +186,7 @@ public class DefaultNodeService implements NodeService {
         String commitId = params.getOrDefault("commitId", null);
         ContextHolder.setContext(projectId, refId);
 
-        NodeGetInfo info = nodeGetHelper.processGetJson(req.getElements(), commitId, this);
+        NodeGetInfo info = getNodeGetHelper().processGetJson(req.getElements(), commitId, this);
 
         ElementsResponse response = new ElementsResponse();
         response.getElements().addAll(info.getActiveElementMap().values());
@@ -187,6 +200,7 @@ public class DefaultNodeService implements NodeService {
 
         ContextHolder.setContext(projectId, refId);
         boolean overwriteJson = Boolean.parseBoolean(params.get("overwrite"));
+        NodePostHelper nodePostHelper = getNodePostHelper();
         nodePostHelper.setPreserveTimestamps(Boolean.parseBoolean(params.get("preserveTimestamps")));
         String commitId = params.get("commitId");
 
@@ -283,7 +297,7 @@ public class DefaultNodeService implements NodeService {
     public ElementsCommitResponse delete(String projectId, String refId, ElementsRequest req, String user) {
         ContextHolder.setContext(projectId, refId);
 
-        NodeChangeInfo info = nodeDeleteHelper
+        NodeChangeInfo info = getNodeDeleteHelper()
             .processDeleteJson(req.getElements(), createCommit(user, refId, projectId, req, null),
                 this);
         ElementsCommitResponse response = new ElementsCommitResponse();

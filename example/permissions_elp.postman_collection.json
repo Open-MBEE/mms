@@ -1,0 +1,1384 @@
+{
+	"info": {
+		"_postman_id": "5c2bade0-8793-43b2-9008-9b5016b0c76c",
+		"name": "permissions_elp",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "login using admin",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"",
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"    ",
+							"});",
+							"",
+							"pm.test(\"response has token\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.token).to.be.a('string');",
+							"    pm.environment.set(\"token\", jsonData.token);",
+							"",
+							"});",
+							"",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"username\": \"{{adminUsername}}\",\n\t\"password\": \"{{adminPassword}}\"\n}"
+				},
+				"url": {
+					"raw": "{{host}}/authentication",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"authentication"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "add org n",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"response has org n\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.orgs[0].id).to.eql('n');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"orgs\": [\n\t\t{\n\t\t\t\"id\": \"n\",\n\t\t\t\"name\": \"n\"\n\t\t}\n\t]\n}"
+				},
+				"url": {
+					"raw": "{{host}}/orgs",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"orgs"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "add elp project nn",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"response has project nn\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.projects[0].id).to.eql('nn');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"projects\": [\n\t\t{\n\t\t\t\"id\": \"nn\", \n\t\t\t\"name\": \"nn\",\n\t\t\t\"orgId\": \"n\",\n\t\t\t\"schema\": \"elp\"\n\t\t}\n\t]\n}"
+				},
+				"url": {
+					"raw": "{{host}}/projects",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get project nn",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"response has project nn\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.projects[0].id).to.eql('nn');    ",
+							"});",
+							"",
+							"pm.test(\"project nn is elp schema\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.projects[0].schema).to.eql('elp');    ",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "{{host}}/projects/nn",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"nn"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "add elements to nn",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"response has elements\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.elements.length).to.eql(3);",
+							"});",
+							"",
+							"pm.environment.set(\"commitId1\", pm.response.json().commitId);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"elements\": [\n\t\t{\n\t\t\t\"id\": \"x\",\n\t\t\t\"name\": \"x\"\n\t\t}, \n        {\n\t\t\t\"id\": \"y\", \n\t\t\t\"name\": \"y\"\n\t\t}, {\n\t\t\t\"id\": \"z\",\n\t\t\t\"name\": \"z\"\n\t\t}\n\t]\n}"
+				},
+				"url": {
+					"raw": "{{host}}/projects/nn/refs/master/elements",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"nn",
+						"refs",
+						"master",
+						"elements"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get elements",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"elements exist\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    for (var e in jsonData.elements) {",
+							"        var el = jsonData.elements[e];",
+							"        if (el.id == 'x') {",
+							"            pm.expect(el.name == 'x');",
+							"        }",
+							"        if (el.id == 'y') {",
+							"            pm.expect(el.name == 'x');",
+							"        }",
+							"        if (el.id == 'z') {",
+							"            pm.expect(el.name == 'z');",
+							"        }",
+							"    }",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"elements\": [\n\t\t{\n\t\t\t\"id\": \"x\"\n\t\t},{\n\t\t\t\"id\": \"y\"\n\t\t}, {\n\t\t\t\"id\": \"z\"\n\t\t}\n\t]\n}"
+				},
+				"url": {
+					"raw": "{{host}}/projects/nn/refs/master/elements",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"nn",
+						"refs",
+						"master",
+						"elements"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get elements using commitId",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"elements exist\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    for (var e in jsonData.elements) {",
+							"        var el = jsonData.elements[e];",
+							"        if (el.id == 'x') {",
+							"            pm.expect(el.name == 'x');",
+							"        }",
+							"        if (el.id == 'y') {",
+							"            pm.expect(el.name == 'x');",
+							"        }",
+							"        if (el.id == 'z') {",
+							"            pm.expect(el.name == 'z');",
+							"        }",
+							"    }",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "{{host}}/projects/nn/refs/master/elements?commitId={{commitId1}}",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"nn",
+						"refs",
+						"master",
+						"elements"
+					],
+					"query": [
+						{
+							"key": "commitId",
+							"value": "{{commitId1}}"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "put read group",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"url": {
+					"raw": "{{host}}/groups/pelpgroupread",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"groups",
+						"pelpgroupread"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "put write group",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"url": {
+					"raw": "{{host}}/groups/pelpgroupwrite",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"groups",
+						"pelpgroupwrite"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "add group restrictions on element x",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"response has elements\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.elements.length).to.eql(1);",
+							"});",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"elements\": [\n\t\t{\n\t\t\t\"id\": \"x\",\n            \"Read Access\":[\"pelpgroupread\"],\n\t\t\t\"Write Access\":[\"pelpgroupwrite\"]\n\t\t}\n\t]\n}"
+				},
+				"url": {
+					"raw": "{{host}}/projects/nn/refs/master/elements",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"nn",
+						"refs",
+						"master",
+						"elements"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "create user",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"username\": \"pelpUser1\",\n\t\"password\": \"pelpUser1\"\n}"
+				},
+				"url": {
+					"raw": "{{host}}/user",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"user"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "add user to project",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"users\": {\n    \t\"action\": \"MODIFY\",\n        \"permissions\": [\n            {\n                \"name\": \"pelpUser1\",\n                \"role\": \"READER\"\n            },\n            {\n                \"name\": \"pelpUser1\",\n                \"role\": \"WRITER\"\n            }\n        ]\n    }\n}"
+				},
+				"url": {
+					"raw": "{{host}}/projects/nn/permissions",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"nn",
+						"permissions"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get elements as user without group access",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"elements exist. x not returned as user not in read or write group \", function () {",
+							"    var jsonData = pm.response.json();",
+							"    for (var e in jsonData.elements) {",
+							"        var el = jsonData.elements[e];",
+							"        if (el.id == 'x') {",
+							"            pm.expect(el.object == 'x');",
+							"            pm.expect(el.message == 'Invalid operation')",
+							"        }else if (el.id == 'y') {",
+							"            pm.expect(el.name == 'x');",
+							"        }else if (el.id == 'z') {",
+							"            pm.expect(el.name == 'z');",
+							"        }",
+							"    }",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "basic",
+					"basic": [
+						{
+							"key": "password",
+							"value": "pelpUser1",
+							"type": "string"
+						},
+						{
+							"key": "username",
+							"value": "pelpUser1",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"elements\": [\n\t\t{\n\t\t\t\"id\": \"x\"\n\t\t},{\n\t\t\t\"id\": \"y\"\n\t\t}, {\n\t\t\t\"id\": \"z\"\n\t\t}\n\t]\n}"
+				},
+				"url": {
+					"raw": "{{host}}/projects/nn/refs/master/elements",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"nn",
+						"refs",
+						"master",
+						"elements"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get elements as user without group access using commitId",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"elements exist. x not returned as user not in read or write group \", function () {",
+							"    var jsonData = pm.response.json();",
+							"    for (var e in jsonData.elements) {",
+							"        var el = jsonData.elements[e];",
+							"        if (el.id == 'x') {",
+							"            pm.expect(el.object == 'x');",
+							"            pm.expect(el.message == 'Invalid operation')",
+							"        }else if (el.id == 'y') {",
+							"            pm.expect(el.name == 'x');",
+							"        }else if (el.id == 'z') {",
+							"            pm.expect(el.name == 'z');",
+							"        }",
+							"    }",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			
+			"request": {
+				"auth": {
+					"type": "basic",
+					"basic": [
+						{
+							"key": "password",
+							"value": "pelpUser1",
+							"type": "string"
+						},
+						{
+							"key": "username",
+							"value": "pelpUser1",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "{{host}}/projects/nn/refs/master/elements?commitId={{commitId1}}",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"nn",
+						"refs",
+						"master",
+						"elements"
+					],
+					"query": [
+						{
+							"key": "commitId",
+							"value": "{{commitId1}}"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "try to change element x name as user without permission",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"response has rejected\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.rejected.length).to.eql(1);",
+							"});",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "basic",
+					"basic": [
+						{
+							"key": "password",
+							"value": "pelpUser1",
+							"type": "string"
+						},
+						{
+							"key": "username",
+							"value": "pelpUser1",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"elements\": [\n\t\t{\n\t\t\t\"id\": \"x\",\n            \"name\":\"newx\"\n\t\t}\n\t]\n}"
+				},
+				"url": {
+					"raw": "{{host}}/projects/nn/refs/master/elements",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"nn",
+						"refs",
+						"master",
+						"elements"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Add user to write group",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"pm.test(\"User added to group\", function () {\r",
+							"    var jsonData = pm.response.json();\r",
+							"    pm.expect(jsonData.added).to.contain(\"pelpUser1\");\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"action\":\"ADD\",\r\n    \"users\":[\r\n        \"pelpUser1\"\r\n    ]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{host}}/groups/pelpgroupwrite/users",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"groups",
+						"pelpgroupwrite",
+						"users"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "try to change element x name as user with permission",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"response has elements\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.elements.length).to.eql(1);",
+							"});",
+							"",
+							"pm.environment.set(\"commitId2\", pm.response.json().commitId);",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "basic",
+					"basic": [
+						{
+							"key": "password",
+							"value": "pelpUser1",
+							"type": "string"
+						},
+						{
+							"key": "username",
+							"value": "pelpUser1",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"elements\": [\n\t\t{\n\t\t\t\"id\": \"x\",\n            \"name\":\"newx\"\n\t\t}\n\t]\n}"
+				},
+				"url": {
+					"raw": "{{host}}/projects/nn/refs/master/elements",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"nn",
+						"refs",
+						"master",
+						"elements"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get elements as user with group access",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"elements exist.\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    for (var e in jsonData.elements) {",
+							"        var el = jsonData.elements[e];",
+							"        if (el.id == 'x') {",
+							"            pm.expect(el.name == 'newx');",
+							"        }else if (el.id == 'y') {",
+							"            pm.expect(el.name == 'x');",
+							"        }else if (el.id == 'z') {",
+							"            pm.expect(el.name == 'z');",
+							"        }",
+							"    }",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "basic",
+					"basic": [
+						{
+							"key": "password",
+							"value": "pelpUser1",
+							"type": "string"
+						},
+						{
+							"key": "username",
+							"value": "pelpUser1",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"elements\": [\n\t\t{\n\t\t\t\"id\": \"x\"\n\t\t},{\n\t\t\t\"id\": \"y\"\n\t\t}, {\n\t\t\t\"id\": \"z\"\n\t\t}\n\t]\n}"
+				},
+				"url": {
+					"raw": "{{host}}/projects/nn/refs/master/elements",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"nn",
+						"refs",
+						"master",
+						"elements"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get elements as user with group access using commitId",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"elements exist and x updated to new x.\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.elements.length == 3);",
+							"    for (var e in jsonData.elements) {",
+							"        var el = jsonData.elements[e];",
+							"        if (el.id == 'x') {",
+							"            pm.expect(el.name == 'newx');",
+							"        }else if (el.id == 'y') {",
+							"            pm.expect(el.name == 'y');",
+							"        }else if (el.id == 'z') {",
+							"            pm.expect(el.name == 'z');",
+							"        }",
+							"    }",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "basic",
+					"basic": [
+						{
+							"key": "password",
+							"value": "pelpUser1",
+							"type": "string"
+						},
+						{
+							"key": "username",
+							"value": "pelpUser1",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "{{host}}/projects/nn/refs/master/elements?commitId={{commitId2}}",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"nn",
+						"refs",
+						"master",
+						"elements"
+					],
+					"query": [
+						{
+							"key": "commitId",
+							"value": "{{commitId2}}"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Remove user from write group",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"pm.test(\"User removed from group\", function () {\r",
+							"    var jsonData = pm.response.json();\r",
+							"    pm.expect(jsonData.removed).to.contain(\"pelpUser1\");\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"action\":\"REMOVE\",\r\n    \"users\":[\r\n        \"pelpUser1\"\r\n    ]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{host}}/groups/pelpgroupwrite/users",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"groups",
+						"pelpgroupwrite",
+						"users"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "try to delete x without permission",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"pm.test(\"response has rejected\", function () {\r",
+							"    var jsonData = pm.response.json();\r",
+							"    pm.expect(jsonData.rejected.length).to.eql(1);\r",
+							"});\r",
+							"\r",
+							"pm.test(\"response has no elements\", function () {\r",
+							"    var jsonData = pm.response.json();\r",
+							"    pm.expect(jsonData.elements.length).to.eql(0);\r",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "basic",
+					"basic": [
+						{
+							"key": "password",
+							"value": "pelpUser1",
+							"type": "string"
+						},
+						{
+							"key": "username",
+							"value": "pelpUser1",
+							"type": "string"
+						}
+					]
+				},
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "{{host}}/projects/nn/refs/master/elements/x",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"nn",
+						"refs",
+						"master",
+						"elements",
+						"x"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Add user to write group again",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"pm.test(\"User added to group\", function () {\r",
+							"    var jsonData = pm.response.json();\r",
+							"    pm.expect(jsonData.added).to.contain(\"pelpUser1\");\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"action\":\"ADD\",\r\n    \"users\":[\r\n        \"pelpUser1\"\r\n    ]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{host}}/groups/pelpgroupwrite/users",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"groups",
+						"pelpgroupwrite",
+						"users"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "delete x",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"pm.test(\"response has no rejected\", function () {\r",
+							"    var jsonData = pm.response.json();\r",
+							"    pm.expect(jsonData.rejected.length).to.eql(0);\r",
+							"});\r",
+							"\r",
+							"pm.test(\"response has elements\", function () {\r",
+							"    var jsonData = pm.response.json();\r",
+							"    pm.expect(jsonData.elements.length).to.eql(1);\r",
+							"});\r",
+							"\r",
+							"pm.environment.set(\"commitId3\", pm.response.json().commitId);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "{{host}}/projects/nn/refs/master/elements/x",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"nn",
+						"refs",
+						"master",
+						"elements",
+						"x"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get element x",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 410\", function () {",
+							"    pm.response.to.have.status(410);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"url": {
+					"raw": "{{host}}/projects/nn/refs/master/elements/x",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"nn",
+						"refs",
+						"master",
+						"elements",
+						"x"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get elements as user with group access using commitId after deleting x",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"elements apart from x exist.\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    for (var e in jsonData.elements) {",
+							"        var el = jsonData.elements[e];",
+							"        pm.expect(el.id != 'x');",
+							"        if (el.id == 'y') {",
+							"            pm.expect(el.name == 'x');",
+							"        }else if (el.id == 'z') {",
+							"            pm.expect(el.name == 'z');",
+							"        }",
+							"    }",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "basic",
+					"basic": [
+						{
+							"key": "password",
+							"value": "pelpUser1",
+							"type": "string"
+						},
+						{
+							"key": "username",
+							"value": "pelpUser1",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "{{host}}/projects/nn/refs/master/elements?commitId={{commitId3}}",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"nn",
+						"refs",
+						"master",
+						"elements"
+					],
+					"query": [
+						{
+							"key": "commitId",
+							"value": "{{commitId3}}"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}

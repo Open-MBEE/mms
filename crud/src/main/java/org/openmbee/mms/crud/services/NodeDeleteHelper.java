@@ -9,9 +9,11 @@ import org.openmbee.mms.core.services.NodeService;
 import org.openmbee.mms.data.domains.scoped.Node;
 import org.openmbee.mms.json.CommitJson;
 import org.openmbee.mms.json.ElementJson;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
 @Service
+@Primary
 public class NodeDeleteHelper extends NodeOperation {
 
     public NodeChangeInfo processDeleteJson(List<ElementJson> elements, CommitJson cmjs, NodeService service) {
@@ -23,6 +25,10 @@ public class NodeDeleteHelper extends NodeOperation {
             }
             Node node = info.getExistingNodeMap().get(nodeId);
             Map<String, Object> indexElement = info.getExistingElementMap().get(nodeId);
+            if(! validateOperation(Operation.REMOVE, null, indexElement, false)) {
+                info.addRejection(nodeId, new Rejection(nodeId, 406, "Invalid operation"));
+                continue;
+            }
             if (node.isDeleted()) {
                 info.addRejection(nodeId, new Rejection(indexElement, 304, "Already deleted"));
                 continue;

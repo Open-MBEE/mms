@@ -12,11 +12,13 @@ import org.openmbee.mms.data.domains.scoped.Branch;
 import org.openmbee.mms.data.domains.scoped.Commit;
 import org.openmbee.mms.data.domains.scoped.Node;
 import org.openmbee.mms.json.ElementJson;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
 import static org.openmbee.mms.core.config.ContextHolder.getContext;
 
 @Service
+@Primary
 public class NodeGetHelper extends NodeOperation {
 
     public NodeGetInfo processGetJsonFromNodes(List<Node> nodes, NodeService service) {
@@ -35,6 +37,12 @@ public class NodeGetHelper extends NodeOperation {
                 continue;
             }
             ElementJson indexElement = info.getExistingElementMap().get(nodeId);
+			
+			if(!validateOperation(Operation.GET, null, indexElement, false)) {
+                info.addRejection(nodeId, new Rejection(nodeId, 406, "Invalid operation"));
+                continue;
+            }
+			
             if (info.getExistingNodeMap().get(nodeId).isDeleted()) {
                 rejectDeleted(info, nodeId, indexElement == null ? new ElementJson().setId(nodeId) : indexElement);
                 continue;
@@ -102,13 +110,13 @@ public class NodeGetHelper extends NodeOperation {
             Instant created = Instant.from(formatter.parse(indexElement.getCreated()));
 
             if (commitId.equals(indexElement.getCommitId())) { //exact match
-                info.getActiveElementMap().put(nodeId, indexElement);
+                addActiveElement(info, nodeId, indexElement);
             } else if (created.isAfter(time)) { // element created after commit
                 rejectNotFound(info, nodeId);
             } else if (modified.isAfter(time)) { // latest element is after commit
                 Optional<ElementJson> tryExact = nodeIndex.getByCommitId(commitId, nodeId);
                 if (tryExact.isPresent()) {
-                    info.getActiveElementMap().put(nodeId, tryExact.get());
+                    addActiveElement(info, nodeId, tryExact.get());
                     continue; // found exact match at commit
                 }
                 if (refCommitIds == null) { // need list of commitIds of current ref to filter on
@@ -118,17 +126,25 @@ public class NodeGetHelper extends NodeOperation {
                     formatter.format(time), refCommitIds);
                 if (e.isPresent()) { // found version of element at commit time
                     //TODO determine if element was deleted at the time?
-                    info.getActiveElementMap().put(nodeId, e.get());
+                    addActiveElement(info, nodeId, e.get());
                 } else {
                     rejectNotFound(info, nodeId); // element not found at commit time
                 }
             } else if (info.getExistingNodeMap().get(nodeId).isDeleted()) { // latest element is before commit, but deleted
                 rejectDeleted(info, nodeId, indexElement);
             } else { // latest element version is version at commit, not deleted
-                info.getActiveElementMap().put(nodeId, indexElement);
+                addActiveElement(info, nodeId, indexElement);
             }
         }
         return info;
+    }
+
+    private void addActiveElement(NodeGetInfo info, String nodeId, ElementJson indexElement) {
+        if(!validateOperation(Operation.GET, null, indexElement, false)) {
+            info.addRejection(nodeId, new Rejection(nodeId, 406, "Invalid operation"));
+            return;
+        }
+        info.getActiveElementMap().put(nodeId, indexElement);
     }
 
     public NodeGetInfo processGetJson(List<ElementJson> elements, Instant time, NodeService service) {

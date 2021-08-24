@@ -48,7 +48,7 @@ public class CameoNodeService extends DefaultNodeService implements NodeService 
 
         String commitId = params.getOrDefault("commitId", null);
         ContextHolder.setContext(projectId, refId);
-        NodeGetInfo info = nodeGetHelper.processGetJson(req.getElements(), commitId, this);
+        NodeGetInfo info = getNodeGetHelper().processGetJson(req.getElements(), commitId, this);
 
         if (!info.getRejected().isEmpty()) {
             //continue looking in visible mounted projects for elements if not all found
@@ -61,7 +61,7 @@ public class CameoNodeService extends DefaultNodeService implements NodeService 
                 ElementsRequest reqNext = buildRequest(curInfo.getRejected().keySet());
                 ContextHolder.setContext(usages.get(i).getFirst(), usages.get(i).getSecond());
                 //TODO use the right commitId in child if commitId is present in params
-                curInfo = nodeGetHelper.processGetJson(reqNext.getElements(), "", this);
+                curInfo = getNodeGetHelper().processGetJson(reqNext.getElements(), "", this);
                 info.getActiveElementMap().putAll(curInfo.getActiveElementMap());
                 curInfo.getActiveElementMap().forEach((id, json) -> info.getRejected().remove(id));
                 curInfo.getRejected().forEach((id, rejection) -> {

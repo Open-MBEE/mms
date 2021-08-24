@@ -17,6 +17,8 @@ import org.openmbee.mms.core.objects.ElementsRequest;
 import org.openmbee.mms.core.objects.ElementsResponse;
 import org.openmbee.mms.core.services.NodeChangeInfo;
 import org.openmbee.mms.core.services.NodeGetInfo;
+import org.openmbee.mms.crud.services.NodeGetHelper;
+import org.openmbee.mms.crud.services.NodePostHelper;
 import org.openmbee.mms.data.domains.scoped.Node;
 import org.openmbee.mms.json.ElementJson;
 import org.springframework.stereotype.Service;
@@ -27,6 +29,7 @@ public class CameoViewService extends CameoNodeService {
     public ElementsResponse getDocuments(String projectId, String refId, Map<String, String> params) {
         ContextHolder.setContext(projectId, refId);
         List<Node> documents = this.nodeRepository.findAllByNodeType(CameoNodeType.DOCUMENT.getValue());
+        NodeGetHelper nodeGetHelper = getNodeGetHelper();
         ElementsResponse res = this.getViews(projectId, refId, buildRequest(nodeGetHelper.convertNodesToMap(documents).keySet()), params);
         for (ElementJson e: res.getElements()) {
             Optional<ElementJson> parent = nodeGetHelper.getFirstRelationshipOfType(e,
@@ -54,6 +57,7 @@ public class CameoViewService extends CameoNodeService {
                 List<String> ownedAttributeIds = (List) element.get(CameoConstants.OWNEDATTRIBUTEIDS);
                 ElementsResponse ownedAttributes = this.read(element.getProjectId(), element.getRefId(),
                     buildRequest(ownedAttributeIds), params);
+                NodeGetHelper nodeGetHelper = getNodeGetHelper();
                 List<ElementJson> sorted = nodeGetHelper.sort(ownedAttributeIds, ownedAttributes.getElements());
                 List<Map> childViews = new ArrayList<>();
                 for (ElementJson attr : sorted) {
@@ -74,6 +78,7 @@ public class CameoViewService extends CameoNodeService {
     public ElementsResponse getGroups(String projectId, String refId, Map<String, String> params) {
         ContextHolder.setContext(projectId, refId);
         List<Node> groups = this.nodeRepository.findAllByNodeType(CameoNodeType.GROUP.getValue());
+        NodeGetHelper nodeGetHelper = getNodeGetHelper();
         ElementsResponse res = this.read(projectId, refId, buildRequest(nodeGetHelper.convertNodesToMap(groups).keySet()), params);
         for (ElementJson e: res.getElements()) {
             Optional<ElementJson> parent = nodeGetHelper.getFirstRelationshipOfType(e,
@@ -96,6 +101,7 @@ public class CameoViewService extends CameoNodeService {
         //gather data on "old" attributes
         List<String> oldOwnedAttributeIds = (List)element.get(CameoConstants.OWNEDATTRIBUTEIDS);
         //use helper to get access to Nodes
+        NodeGetHelper nodeGetHelper = getNodeGetHelper();
         NodeGetInfo oldInfo = nodeGetHelper.processGetJson(buildRequest(oldOwnedAttributeIds).getElements(), null);
         List<PropertyData> oldProperties = new ArrayList<>();
         Map<String, PropertyData> oldPropertiesTypeMapping = new HashMap<>(); //typeId to PropertyData
@@ -129,7 +135,7 @@ public class CameoViewService extends CameoNodeService {
         //go through requested _childView changes
         //get the first package element that's in the owner chain of parent class
         //  cameo/sysml1 requires associations to be placed in the first owning package, is this rule still valid?
-        Optional<ElementJson> p = nodePostHelper.getFirstRelationshipOfType(element,
+        Optional<ElementJson> p = getNodePostHelper().getFirstRelationshipOfType(element,
             Arrays.asList(CameoNodeType.PACKAGE.getValue(), CameoNodeType.GROUP.getValue()), CameoConstants.OWNERID);
         String packageId = p.isPresent() ? p.get().getId() : CameoConstants.HOLDING_BIN_PREFIX + element.getProjectId();
         List<PropertyData> newProperties = new ArrayList<>();
@@ -182,6 +188,7 @@ public class CameoViewService extends CameoNodeService {
             newAssocPropertyId, newPropertyId);
         ElementJson newAssocPropertyJson = cameoHelper.createProperty(newAssocPropertyId, "",
             newAssocId, "none", parentId, newAssocId);
+        NodePostHelper nodePostHelper = getNodePostHelper();
         nodePostHelper.processElementAdded(newPropertyJson, newPropertyNode, info);
         nodePostHelper.processElementAdded(newAssocJson, newAssocNode, info);
         nodePostHelper.processElementAdded(newAssocPropertyJson, newAssocPropertyNode, info);
@@ -201,6 +208,7 @@ public class CameoViewService extends CameoNodeService {
 
     private void deletePropertyElements(List<PropertyData> properties, NodeChangeInfo info) {
         Set<String> assocToDelete = new HashSet<>();
+        NodePostHelper nodePostHelper = getNodePostHelper();
         for (PropertyData oldProperty: properties) {
             Node oldPropertyNode = oldProperty.getPropertyNode();
             ElementJson oldPropertyJson = oldProperty.getPropertyJson();
@@ -212,6 +220,7 @@ public class CameoViewService extends CameoNodeService {
             assocToDelete.add(assocId);
         }
         Set<String> assocPropToDelete = new HashSet<>();
+        NodeGetHelper nodeGetHelper = getNodeGetHelper();
         NodeGetInfo assocInfo = nodeGetHelper.processGetJson(buildRequest(assocToDelete).getElements(), null);
         for (ElementJson assocJson: assocInfo.getActiveElementMap().values()) {
             Node assocNode = assocInfo.getExistingNodeMap().get(assocJson.getId());

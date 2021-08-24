@@ -16,9 +16,11 @@ import org.openmbee.mms.json.BaseJson;
 import org.openmbee.mms.json.CommitJson;
 import org.openmbee.mms.json.ElementJson;
 import org.openmbee.mms.data.domains.scoped.Node;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
 @Service
+@Primary
 public class NodePostHelper extends NodeOperation {
 
     public boolean isUpdated(BaseJson element, Map<String, Object> existing,
@@ -82,6 +84,11 @@ public class NodePostHelper extends NodeOperation {
                     indexElement.setCreator(init.get().getCreator());
                     indexElement.setCreated(formatter.format(init.get().getTimestamp()));
                 }
+            }
+
+            if(! validateOperation(added ? Operation.ADD : Operation.UPDATE, element, indexElement, overwriteJson)) {
+                info.addRejection(element.getId(), new Rejection(element, 406, "Invalid operation"));
+                continue;
             }
 
             if (!added) {
