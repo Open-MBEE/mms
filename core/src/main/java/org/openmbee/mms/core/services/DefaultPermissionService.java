@@ -166,7 +166,7 @@ public class DefaultPermissionService implements PermissionService {
     @Override
     public PermissionUpdatesResponse setProjectInherit(boolean isInherit, String projectId) {
         PermissionUpdatesResponseBuilder responseBuilder = new PermissionUpdatesResponseBuilder();
-        responseBuilder.setInherit(true);
+        responseBuilder.setInherit(isInherit);
         ProjectJson project = getProject(projectId);
         PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(project);
         if (permissionsDelegate.setInherit(isInherit)) {
