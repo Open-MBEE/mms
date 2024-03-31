@@ -183,11 +183,9 @@ public class FederatedCommitPersistence implements CommitPersistence {
         // this is used for potentially cleaning up a failed commit save
         // should not be used intentionally
         ContextHolder.setContext(projectId);
-        Optional<Commit> commitOptional = commitDAO.findByCommitId(commitId);
-        Optional<CommitJson> commitJsonOptional =  commitOptional.isPresent() ?
-            commitIndexDAO.findById(commitOptional.get().getCommitId()) : Optional.empty();
+        Optional<CommitJson> commitJsonOptional = commitIndexDAO.findById(commitId);
         if (commitJsonOptional.isPresent()) {
-            commitIndexDAO.deleteById(commitJsonOptional.get().getDocId());
+            commitIndexDAO.deleteById(commitId);
             return commitJsonOptional;
         }
         return Optional.empty();
