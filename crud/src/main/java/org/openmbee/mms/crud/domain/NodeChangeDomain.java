@@ -84,19 +84,10 @@ public abstract class NodeChangeDomain extends JsonDomain {
     }
 
     public void processElementDeleted(NodeChangeInfo info, ElementJson element) {
-        //TODO Probably don't need this (see method below)
-        element.setIsDeleted("true");
     }
 
     public NodeChangeInfo processDeleteJson(NodeChangeInfo info, Collection<ElementJson> elements) {
-
-        for(ElementJson element : elements) {
-            //TODO I don't think we need to do this by default, it shouldn't come back if deleted
-            if (Boolean.parseBoolean(element.getIsDeleted())) {
-                info.addRejection(element.getId(), new Rejection(element, 304, "Already deleted"));
-                continue;
-            }
-
+        for (ElementJson element : elements) {
             ElementJson request = info.getReqElementMap().get(element.getId());
             request.putAll(element);
             processElementDeleted(info, request);
