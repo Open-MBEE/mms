@@ -68,10 +68,10 @@ public class FederatedCommitPersistence implements CommitPersistence {
         if (commitOptional.isPresent()) {
             Instant now = Instant.now();
             commitJson.setModified(Formats.FORMATTER.format(now));
-
+            commitJson.setDocId(commitJson.getId());
             Commit commit = commitOptional.get();
             commit.setComment(commitJson.getComment());
-            commit.setTimestamp(now);
+            //commit.setTimestamp(now);
             commitDAO.save(commit);
             return commitIndexDAO.update(commitJson);
         }
