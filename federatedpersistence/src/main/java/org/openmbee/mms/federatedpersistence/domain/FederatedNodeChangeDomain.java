@@ -267,10 +267,12 @@ public class FederatedNodeChangeDomain extends NodeChangeDomain {
         FederatedNodeChangeInfo info = (FederatedNodeChangeInfo)nodeChangeInfo;
         Set<String> indexIds = Optional.ofNullable(info.getReqIndexIds()).orElse(new HashSet<>());
         Map<String, Node> existingNodeMap = Optional.ofNullable(info.getExistingNodeMap()).orElse(new HashMap<>());
-        Map<String, ElementJson> reqElementMap = Optional.ofNullable(info.getReqElementMap()).orElse(new HashMap<>());
+        Map<String, ElementJson> reqElementMap = new HashMap<>(); // don't add to any existing since this change processing is only for transactedElements
         Map<String, ElementJson> existingElementMap = Optional.ofNullable(info.getExistingElementMap()).orElse(new HashMap<>());
 
+        Set<String> transactedIndexIds = new HashSet<>();
         for (Node node : existingNodes) {
+            transactedIndexIds.add(node.getDocId());
             indexIds.add(node.getDocId());
             existingNodeMap.put(node.getNodeId(), node);
         }
@@ -279,7 +281,7 @@ public class FederatedNodeChangeDomain extends NodeChangeDomain {
         }
 
         // bulk read existing elements in elastic
-        List<ElementJson> existingElements = nodeIndex.findAllById(indexIds);
+        List<ElementJson> existingElements = nodeIndex.findAllById(transactedIndexIds);
         existingElementMap.putAll(convertJsonToMap(existingElements));
 
         info.setExistingElementMap(existingElementMap);
