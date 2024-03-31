@@ -54,7 +54,11 @@ public class FederatedCommitPersistence implements CommitPersistence {
         } catch (Exception e) {
             logger.error("Couldn't create commit: {}", commitJson.getId(), e);
             //Need to clean up in case of partial creation
-            deleteById(commitJson.getProjectId(), commitJson.getId());
+            try {
+                deleteById(commitJson.getProjectId(), commitJson.getId());
+            } catch (Exception ex) {
+                logger.error("Commit cleanup error: ", ex);
+            }
             throw new InternalErrorException("Could not create commit");
         }
     }
@@ -176,18 +180,16 @@ public class FederatedCommitPersistence implements CommitPersistence {
 
     @Override
     public Optional<CommitJson> deleteById(String projectId, String commitId) {
+        // this is used for potentially cleaning up a failed commit save
+        // should not be used intentionally
         ContextHolder.setContext(projectId);
         Optional<Commit> commitOptional = commitDAO.findByCommitId(commitId);
-        try {
-            Optional<CommitJson> commitJsonOptional =  commitOptional.isPresent() ?
-                commitIndexDAO.findById(commitOptional.get().getCommitId()) : Optional.empty();
-            if (commitJsonOptional.isPresent()) {
-                commitIndexDAO.deleteById(commitJsonOptional.get().getDocId());
-                return commitJsonOptional;
-            }
-        } catch (Exception e) {
-            throw new InternalErrorException("Could not delete commit");
+        Optional<CommitJson> commitJsonOptional =  commitOptional.isPresent() ?
+            commitIndexDAO.findById(commitOptional.get().getCommitId()) : Optional.empty();
+        if (commitJsonOptional.isPresent()) {
+            commitIndexDAO.deleteById(commitJsonOptional.get().getDocId());
+            return commitJsonOptional;
         }
-        throw new NotFoundException("Could not delete commit");
+        return Optional.empty();
     }
 }
