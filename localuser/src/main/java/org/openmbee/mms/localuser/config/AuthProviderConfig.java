@@ -15,7 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @Configuration
 public class AuthProviderConfig {
 
-    private static Logger logger = LoggerFactory.getLogger(LocalUserSecurityConfig.class);
+    private static final Logger logger = LoggerFactory.getLogger(AuthProviderConfig.class);
 
     private UserDetailsServiceImpl userDetailsService;
     private PasswordEncoder passwordEncoder;

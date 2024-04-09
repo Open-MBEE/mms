@@ -1,6 +1,6 @@
 package org.openmbee.mms.rdb.repositories;
 
-import org.openmbee.mms.core.dao.WebhookDAO;
+import org.openmbee.mms.data.dao.WebhookDAO;
 import org.openmbee.mms.data.domains.global.Webhook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;

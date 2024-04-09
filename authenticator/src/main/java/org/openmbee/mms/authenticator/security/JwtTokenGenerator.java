@@ -101,7 +101,10 @@ public class JwtTokenGenerator implements Serializable, TokenService {
 
     private boolean isTokenExpired(String token) {
         final Date expirationDate = getExpirationDateFromToken(token);
-        return expirationDate.before(new Date());
+        if (expirationDate != null) {
+            return expirationDate.before(new Date());
+        }
+        return true;
     }
 
     @Override

@@ -38,7 +38,7 @@ jobs:
             docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run crud.postman_collection.json -e test-env.json --delay-request 500
             docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run getAtCommits.postman_collection.json -e test-env.json --delay-request 500
             docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run makeBranchFromCommit.postman_collection.json -e test-env.json --delay-request 500
-            docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run cameo.postman_collection.json -e test-env.json --delay-request 1000
+            docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run cameo.postman_collection.json -e test-env.json --delay-request 500
             docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run jupyter.postman_collection.json -e test-env.json --delay-request 500
             docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run localauth.postman_collection.json -e test-env.json --delay-request 500
             docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run permissions.postman_collection.json -e test-env.json --delay-request 500

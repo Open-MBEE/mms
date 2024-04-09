@@ -1,42 +1,28 @@
 package org.openmbee.mms.crud.controllers.projects;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
-
-import org.openmbee.mms.core.config.ContextHolder;
-import org.openmbee.mms.core.config.Privileges;
-import org.openmbee.mms.core.config.ProjectSchemas;
-import org.openmbee.mms.core.dao.ProjectDAO;
-import org.openmbee.mms.core.dao.ProjectIndex;
+import org.openmbee.mms.core.config.*;
+import org.openmbee.mms.core.exceptions.BadRequestException;
+import org.openmbee.mms.core.exceptions.DeletedException;
 import org.openmbee.mms.core.exceptions.MMSException;
+import org.openmbee.mms.core.exceptions.NotFoundException;
 import org.openmbee.mms.core.objects.ProjectsRequest;
 import org.openmbee.mms.core.objects.ProjectsResponse;
-import org.openmbee.mms.core.exceptions.DeletedException;
 import org.openmbee.mms.core.objects.Rejection;
-import org.openmbee.mms.data.domains.global.Project;
-import org.openmbee.mms.crud.controllers.BaseController;
-import org.openmbee.mms.core.exceptions.BadRequestException;
-import org.openmbee.mms.core.exceptions.NotFoundException;
 import org.openmbee.mms.core.services.ProjectService;
+import org.openmbee.mms.crud.CrudConstants;
+import org.openmbee.mms.crud.controllers.BaseController;
+import org.openmbee.mms.crud.services.ProjectDeleteService;
 import org.openmbee.mms.json.ProjectJson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.time.Instant;
+import java.util.*;
+
 
 @RestController
 @RequestMapping("/projects")
@@ -45,32 +31,34 @@ public class ProjectsController extends BaseController {
 
     private static final String PROJECT_ID_VALID_PATTERN = "^[\\w-]+$";
 
-    ProjectDAO projectRepository;
-    ProjectIndex projectIndex;
-    ProjectSchemas schemas;
-
+    private ProjectDeleteService projectDeleteService;
+    private ProjectSchemas projectSchemas;
 
     @Autowired
-    public ProjectsController(ProjectDAO projectRepository, ProjectIndex projectIndex, ProjectSchemas schemas) {
-        this.projectRepository = projectRepository;
-        this.projectIndex = projectIndex;
-        this.schemas = schemas;
+    public void setProjectDeleteService(ProjectDeleteService projectDeleteService) {
+        this.projectDeleteService = projectDeleteService;
+    }
+
+    @Autowired
+    public void setProjectSchemas(ProjectSchemas projectSchemas) {
+        this.projectSchemas = projectSchemas;
     }
 
     @GetMapping
-    public ProjectsResponse getAllProjects(Authentication auth,
-                                           @RequestParam(required = false) String orgId) {
+    public ProjectsResponse getAllProjects(Authentication auth, @RequestParam(required = false) String orgId) {
+
         ProjectsResponse response = new ProjectsResponse();
-        List<Project> allProjects = orgId != null ? projectRepository.findAllByOrgId(orgId) : projectRepository.findAll();
-        for (Project proj : allProjects) {
-            if (mss.hasProjectPrivilege(auth, proj.getProjectId(), Privileges.PROJECT_READ.name(), true)) {
-                ContextHolder.setContext(proj.getProjectId());
-                if(proj.getDocId() != null  && !proj.isDeleted()) {
-                    Optional<ProjectJson> projectJsonOption = projectIndex.findById(proj.getDocId());
-                    projectJsonOption.ifPresentOrElse(json -> response.getProjects().add(json), ()-> {
-                        logger.error("Project json not found for id: {}", proj.getProjectId());
-                    });
+        Collection<ProjectJson> allProjects =
+            orgId == null ? projectPersistence.findAll() : projectPersistence.findAllByOrgId(orgId);
+        for (ProjectJson projectJson : allProjects) {
+            try {
+                if (mss.hasProjectPrivilege(auth, projectJson.getProjectId(), Privileges.PROJECT_READ.name(), true)
+                        && projectJson.getDocId() != null
+                        && !Constants.TRUE.equals(projectJson.getIsDeleted())) {
+                    response.getProjects().add(projectJson);
                 }
+            } catch(NotFoundException ex) {
+                logger.error("Project {} was not found when getting all projects.", projectJson.getProjectId());
             }
         }
         return response;
@@ -83,22 +71,18 @@ public class ProjectsController extends BaseController {
 
         ContextHolder.setContext(projectId);
         ProjectsResponse response = new ProjectsResponse();
-        Optional<Project> projectOption = projectRepository.findByProjectId(projectId);
-        if (!projectOption.isPresent()) {
+        Optional<ProjectJson> projectOption = projectPersistence.findById(projectId);
+        if (projectOption.isEmpty()) {
             throw new NotFoundException(response.addMessage("Project not found"));
         }
-        Optional<ProjectJson> projectJsonOption = projectIndex.findById(projectOption.get().getDocId());
-        projectJsonOption.ifPresentOrElse(json -> response.getProjects().add(json), ()-> {
-            throw new NotFoundException(response.addMessage("Project JSON not found"));
-        });
-        if (projectOption.get().isDeleted()) {
+        response.getProjects().add(projectOption.get());
+        if (Constants.TRUE.equals(projectOption.get().getIsDeleted())) {
             throw new DeletedException(response);
         }
         return response;
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Transactional
     @PreAuthorize("isAuthenticated()")
     public ProjectsResponse createOrUpdateProjects(
         @RequestBody ProjectsRequest projectsPost,
@@ -113,59 +97,81 @@ public class ProjectsController extends BaseController {
             try {
                 if (json.getProjectId() == null || json.getProjectId().isEmpty()) {
                     json.setId(UUID.randomUUID().toString());
-                }
-                if (!isProjectIdValid(json.getProjectId())) {
+                } else if (!isProjectIdValid(json.getProjectId())) {
                     response.addRejection(new Rejection(json, 400, "Project id is invalid."));
                     continue;
                 }
-                if ((json.getProjectType() != null) && (!((schemas.getSchemas())
-                    .containsKey(json.getProjectType())))) {
-                    response.addRejection(new Rejection(json, 400, "Project schema is unknown."));
-                    continue;
+
+                Optional<ProjectJson> existingOptional = projectPersistence.findById(json.getProjectId());
+                if (existingOptional.isPresent()) {
+                    //Project exists, should merge the json, but not if schema is different
+                    if (json.getProjectType() != null && !json.getProjectType().equals(existingOptional.get().getProjectType())) {
+                        response.addRejection(new Rejection(json, 400, "Cannot change existing project schema"));
+                        continue;
+                    }
+                    json.merge(existingOptional.get());
+                } else {
+                    //New Project
+                    if (json.getCreated() == null || json.getCreated().isEmpty()) {
+                        json.setCreated(Formats.FORMATTER.format(Instant.now()));
+                    }
+                    if (json.getType() == null || json.getType().isEmpty()) {
+                        json.setType(CrudConstants.PROJECT);
+                    }
+                    if ((json.getProjectType() != null) && (!((projectSchemas.getSchemas())
+                            .containsKey(json.getProjectType())))) {
+                        response.addRejection(new Rejection(json, 400, "Project schema is unknown."));
+                        continue;
+                    }
+                    //This needs to be used for create and update
+                    if (json.getCreator() == null || json.getCreator().isEmpty()) {
+                        json.setCreator(auth.getName());
+                    }
                 }
+
                 ProjectService ps = getProjectService(json);
-                if (!ps.exists(json.getProjectId())) {
+                String projectId = json.getProjectId();
+                if (!ps.exists(projectId)) {
                     if (!mss.hasOrgPrivilege(auth, json.getOrgId(),
                         Privileges.ORG_CREATE_PROJECT.name(), false)) {
                         response.addRejection(new Rejection(json, 403, "No permission to create project under org"));
                         continue;
                     }
-                    if (json.getCreator() == null || json.getCreator().isEmpty()) {
-                        json.setCreator(auth.getName());
-                    }
                     response.getProjects().add(ps.create(json));
-                    permissionService.initProjectPerms(json.getProjectId(), true, auth.getName());
+                    permissionService.initProjectPerms(projectId, true, auth.getName());
                 } else {
                     if (!mss.hasProjectPrivilege(auth, json.getProjectId(),
                         Privileges.PROJECT_EDIT.name(), false)) {
                         response.addRejection(new Rejection(json, 403, "No permission to change project"));
                         continue;
                     }
-                    boolean updateInheritedPerms = false;
+                    boolean updatePermissions = false;
                     if (json.getOrgId() != null && !json.getOrgId().isEmpty()) {
-                        Project proj = projectRepository.findByProjectId(json.getProjectId()).get();
-                        String existingOrg = proj.getOrgId();
-                        if (!json.getOrgId().equals(existingOrg)) {
-                            if (!mss.hasProjectPrivilege(auth, json.getProjectId(), Privileges.PROJECT_DELETE.name(), false) ||
-                                !mss.hasOrgPrivilege(auth, json.getOrgId(), Privileges.ORG_CREATE_PROJECT.name(), false)) {
-                                response.addRejection(
-                                    new Rejection(json, 403, "No permission to move project org"));
-                                continue;
-                            }
-                            if (proj.isInherit()) {
-                                updateInheritedPerms = true;
+                        Optional<ProjectJson> projectJsonOption = projectPersistence.findById(json.getProjectId());
+                        if (projectJsonOption.isPresent()) {
+                            ProjectJson projectJson = projectJsonOption.get();
+                            String existingOrg = projectJson.getOrgId();
+                            if (!json.getOrgId().equals(existingOrg)) {
+                                if (!mss.hasProjectPrivilege(auth, json.getProjectId(), Privileges.PROJECT_DELETE.name(), false) ||
+                                        !mss.hasOrgPrivilege(auth, json.getOrgId(), Privileges.ORG_CREATE_PROJECT.name(), false)) {
+                                    response.addRejection(
+                                        new Rejection(json, 403, "No permission to move project org"));
+                                    continue;
+                                }
+                                if (projectPersistence.inheritsPermissions(projectJson.getProjectId())) {
+                                    updatePermissions = true;
+                                }
                             }
                         }
                     }
                     response.getProjects().add(ps.update(json));
-                    if (updateInheritedPerms) {
+                    if (updatePermissions) {
                         permissionService.setProjectInherit(false, json.getProjectId());
                         permissionService.setProjectInherit(true, json.getProjectId());
                     }
                 }
             } catch (MMSException ex) {
                 response.addRejection(new Rejection(json, ex.getCode().value(), ex.getMessageObject().toString()));
-                continue;
             }
         }
         if (projectsPost.getProjects().size() == 1) {
@@ -176,31 +182,15 @@ public class ProjectsController extends BaseController {
 
 
     @DeleteMapping(value = "/{projectId}")
-    @Transactional
     @PreAuthorize("@mss.hasProjectPrivilege(authentication, #projectId, 'PROJECT_DELETE', false)")
     public ProjectsResponse deleteProject(
         @PathVariable String projectId,
-        @RequestParam(required = false, defaultValue = "false") boolean hard) {
+        @RequestParam(required = false, defaultValue = Constants.FALSE) boolean hard) {
 
-        ProjectsResponse response = new ProjectsResponse();
-        Optional<Project> projectOption = projectRepository.findByProjectId(projectId);
-        if (!projectOption.isPresent()) {
-            throw new NotFoundException(response.addMessage("Project not found"));
+        if(!isProjectIdValid(projectId)) {
+            throw new BadRequestException("Invalid project id");
         }
-        Project project = projectOption.get();
-        project.setDeleted(true);
-        ProjectJson projectJson = new ProjectJson();
-        projectJson.merge(convertToMap(project));
-        List<ProjectJson> res = new ArrayList<>();
-        res.add(projectJson);
-        if (hard) {
-            projectRepository.delete(project);
-            projectIndex.delete(projectId);
-        } else {
-            projectRepository.save(project);
-            // TODO soft delete for index?
-        }
-        return response.setProjects(res);
+        return projectDeleteService.deleteProject(projectId, hard);
     }
 
     private ProjectService getProjectService(ProjectJson json) {
@@ -209,7 +199,7 @@ public class ProjectsController extends BaseController {
             try {
                 type = this.getProjectType(json.getProjectId());
             } catch (NotFoundException e) {
-                type = "default";
+                type = CrudConstants.DEFAULT;
             }
             json.setProjectType(type);
         }

@@ -5,16 +5,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import org.openmbee.mms.core.config.ContextHolder;
 import org.openmbee.mms.core.objects.ElementsRequest;
 import org.openmbee.mms.core.objects.ElementsResponse;
 import org.openmbee.mms.core.objects.Rejection;
 import org.openmbee.mms.core.services.NodeChangeInfo;
-import org.openmbee.mms.crud.services.NodeOperation;
+import org.openmbee.mms.crud.domain.JsonDomain;
 import org.openmbee.mms.json.ElementJson;
 import org.openmbee.mms.crud.services.DefaultNodeService;
 import org.openmbee.mms.core.services.NodeService;
-import org.openmbee.mms.data.domains.scoped.Node;
 import org.openmbee.mms.jupyter.JupyterConstants;
 import org.openmbee.mms.jupyter.JupyterNodeType;
 import org.openmbee.mms.jupyter.controllers.NotebooksRequest;
@@ -32,21 +30,11 @@ public class JupyterNodeService extends DefaultNodeService implements NodeServic
         this.jupyterHelper = jupyterHelper;
     }
 
-    @Override
-    public void extraProcessPostedElement(ElementJson element, Node node, NodeChangeInfo info) {
-        node.setNodeType(JupyterHelper.getNodeType(element).getValue());
-    }
-
     public ElementsResponse readNotebooks(String projectId, String refId, String elementId, Map<String, String> params) {
         ElementsRequest req = new ElementsRequest();
         List<ElementJson> reqs = new ArrayList<>();
         if (elementId == null || elementId.isEmpty()) {
-            ContextHolder.setContext(projectId, refId);
-            List<Node> notebooks = this.nodeRepository
-                .findAllByDeletedAndNodeType(false, JupyterNodeType.NOTEBOOK.getValue());
-            for (Node n : notebooks) {
-                reqs.add((new ElementJson()).setId(n.getNodeId()));
-            }
+           reqs.addAll(getNodePersistence().findAllByNodeType(projectId, refId, null,JupyterNodeType.NOTEBOOK.getValue()));
         } else {
             reqs.add((new ElementJson()).setId(elementId));
         }
@@ -72,7 +60,7 @@ public class JupyterNodeService extends DefaultNodeService implements NodeServic
             ElementsRequest req2 = new ElementsRequest();
             req2.setElements(req2s);
             ElementsResponse cells = this.read(projectId, refId, req2, params);
-            Map<String, ElementJson> cellmap = NodeOperation.convertJsonToMap(cells.getElements());
+            Map<String, ElementJson> cellmap = JsonDomain.convertJsonToMap(cells.getElements());
             e.put(JupyterConstants.CELLS, order((List<String>)e.get(JupyterConstants.CELLS), cellmap));
         }
         res.getElements().removeAll(nonNotebooks);

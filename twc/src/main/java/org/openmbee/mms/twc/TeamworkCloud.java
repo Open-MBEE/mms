@@ -70,25 +70,26 @@ public class TeamworkCloud {
 		this.adminPwd = adminPwd;
 	}
 
-	public TeamworkCloudRolesMapping getRoles() {
+	synchronized public TeamworkCloudRolesMapping getRoles() {
 		return roles;
 	}
 
-	public void setRoles(TeamworkCloudRolesMapping roles) {
+	synchronized public void setRoles(TeamworkCloudRolesMapping roles) {
 		this.roles = roles;
 	}
 
-	public void setTwcmmsRolesMap(Map<String, List<String>> twcmmsRolesMap) {
+	synchronized public void setTwcmmsRolesMap(Map<String, List<String>> twcmmsRolesMap) {
 		this.twcmmsRolesMap = twcmmsRolesMap;
 	}
 
     synchronized public Set<String> getKnownNames() {
         if(knownNames == null){
-            knownNames = new HashSet<>();
-            knownNames.add(url.toLowerCase());
+            HashSet<String> tempNames = new HashSet<>();
+            tempNames.add(url.toLowerCase());
             if(aliases != null) {
-                aliases.stream().map(String::toLowerCase).forEach(v -> knownNames.add(v));
+                aliases.stream().map(String::toLowerCase).forEach(v -> tempNames.add(v));
             }
+            knownNames = tempNames;
         }
         return knownNames;
     }

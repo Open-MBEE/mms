@@ -1,5 +1,6 @@
 dependencies {
     api project(':core')
+    api project(':data')
 
     api commonDependencies.'spring-data-jpa'
 

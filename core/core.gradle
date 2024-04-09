@@ -1,7 +1,13 @@
 dependencies {
-    api project(':data')
+
     api project(':json')
 
+    api commonDependencies.'jackson-annotations'
+    api commonDependencies.'jackson-databind'
+    api commonDependencies.'jackson-datatype-hibernate5'
+    api commonDependencies.'jackson-datatype-jsr310'
+
+    api commonDependencies.'spring-data-commons'
     api commonDependencies.'spring-security-config'
     api commonDependencies.'spring-webmvc'
     api commonDependencies.'spring-tx'
@@ -10,4 +16,10 @@ dependencies {
     implementation commonDependencies.'servlet-api'
 
     testImplementation commonDependencies.'spring-boot-starter-test'
+}
+
+tasks {
+    processResources {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    }
 }

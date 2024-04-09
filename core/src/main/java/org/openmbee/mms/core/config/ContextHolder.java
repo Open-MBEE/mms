@@ -12,7 +12,7 @@ public class ContextHolder {
     }
 
     public static void setContext(String projectId) {
-        contextHolder.set(new ContextObject(projectId));
+        setContext(projectId, getContext().getProjectId().equals(projectId) ? getContext().getBranchId() : Constants.MASTER_BRANCH);
     }
 
     public static void setContext(String projectId, String refId) {

@@ -6,7 +6,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import org.openmbee.mms.core.dao.BranchIndexDAO;
+import org.openmbee.mms.data.dao.BranchIndexDAO;
 import org.openmbee.mms.json.BaseJson;
 import org.openmbee.mms.json.RefJson;
 import org.springframework.stereotype.Component;

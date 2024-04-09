@@ -1,76 +1,29 @@
 package org.openmbee.mms.core.services;
 
-import java.time.Instant;
-import java.util.Map;
-import java.util.Set;
-import org.openmbee.mms.data.domains.scoped.Node;
-import org.openmbee.mms.json.CommitJson;
 import org.openmbee.mms.json.ElementJson;
 
-public class NodeChangeInfo extends NodeGetInfo {
+import java.time.Instant;
+import java.util.Map;
 
-    Map<String, Node> toSaveNodeMap;
+public interface NodeChangeInfo extends NodeGetInfo {
 
-    Map<String, ElementJson> updatedMap;
+    Instant getInstant();
 
-    Map<String, ElementJson> deletedMap;
+    void setInstant(Instant instant);
 
-    Set<String> oldDocIds;
+    Map<String, ElementJson> getUpdatedMap();
 
-    CommitJson commitJson;
+    NodeChangeInfo setUpdatedMap(Map<String, ElementJson> updatedMap);
 
-    Instant now;
+    Map<String, ElementJson> getDeletedMap();
 
-    public Instant getNow() {
-        return now;
-    }
+    NodeChangeInfo setDeletedMap(Map<String, ElementJson> deletedMap);
 
-    public void setNow(Instant now) {
-        this.now = now;
-    }
+    boolean getPreserveTimestamps();
 
-    public Map<String, Node> getToSaveNodeMap() {
-        return toSaveNodeMap;
-    }
+    NodeChangeInfo setPreserveTimestamps(boolean preserveTimestamps);
 
-    public NodeChangeInfo setToSaveNodeMap(Map<String, Node> toSaveNodeMap) {
-        this.toSaveNodeMap = toSaveNodeMap;
-        return this;
-    }
+    boolean getOverwrite();
 
-    public Map<String, ElementJson> getUpdatedMap() {
-        return updatedMap;
-    }
-
-    public NodeChangeInfo setUpdatedMap(Map<String, ElementJson> updatedMap) {
-        this.updatedMap = updatedMap;
-        return this;
-    }
-
-    public Map<String, ElementJson> getDeletedMap() {
-        return deletedMap;
-    }
-
-    public NodeChangeInfo setDeletedMap(Map<String, ElementJson> deletedMap) {
-        this.deletedMap = deletedMap;
-        return this;
-    }
-
-    public Set<String> getOldDocIds() {
-        return oldDocIds;
-    }
-
-    public NodeChangeInfo setOldDocIds(Set<String> oldDocIds) {
-        this.oldDocIds = oldDocIds;
-        return this;
-    }
-
-    public CommitJson getCommitJson() {
-        return commitJson;
-    }
-
-    public NodeChangeInfo setCommitJson(CommitJson commitJson) {
-        this.commitJson = commitJson;
-        return this;
-    }
+    NodeChangeInfo setOverwrite(boolean overwrite);
 }

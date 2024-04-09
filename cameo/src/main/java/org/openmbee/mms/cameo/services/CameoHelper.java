@@ -6,12 +6,14 @@ import java.util.List;
 import java.util.Set;
 import org.openmbee.mms.cameo.CameoConstants;
 import org.openmbee.mms.cameo.CameoNodeType;
+import org.openmbee.mms.core.utils.ElementUtils;
 import org.openmbee.mms.json.ElementJson;
 import org.springframework.stereotype.Component;
 
 @Component
-public class CameoHelper {
+public class CameoHelper implements ElementUtils {
 
+    @Override
     public CameoNodeType getNodeType(ElementJson e) {
         if (isDocument(e)) {
             return CameoNodeType.DOCUMENT;

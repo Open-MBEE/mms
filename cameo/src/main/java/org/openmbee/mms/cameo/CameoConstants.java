@@ -14,6 +14,7 @@ public class CameoConstants {
     public static final String CLASSIFIERIDS = "classifierIds";
     public static final String CLIENTDEPENDENCYIDS = "clientDependencyIds";
     public static final String COLLABORATIONUSEIDS = "collaborationUseIds";
+    public static final String COMMITID = "commitId";
     public static final String DATATYPEID = "datatypeId";
     public static final String DEFAULTVALUE = "defaultValue";
     public static final String DEFININGFEATUREID = "definingFeatureId";
@@ -46,12 +47,15 @@ public class CameoConstants {
     public static final String NAME = "name";
     public static final String NAMEEXPRESSION = "nameExpression";
     public static final String NAVIGABLEOWNEDENDIDS = "navigableOwnedEndIds";
+    public static final String NONE = "none";
     public static final String OWNEDATTRIBUTEIDS = "ownedAttributeIds";
     public static final String OWNEDENDIDS = "ownedEndIds";
     public static final String OWNERID = "ownerId";
     public static final String PACKAGEIMPORTIDS = "packageImportIds";
     public static final String PACKAGEMERGEIDS = "packageMergeIds";
+    public static final String PARENTID = "_parentId";
     public static final String POWERTYPEEXTENTIDS = "powertypeExtentIds";
+    public static final String PROPERTY = "Property";
     public static final String PROPERTYID = "propertyId";
     public static final String PROPERTYTYPE = "propertyType";
     public static final String PROFILEAPPLICATIONIDS = "profileApplicationIds";

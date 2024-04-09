@@ -1,8 +1,8 @@
 package org.openmbee.mms.twc.security;
 
 import org.openmbee.mms.core.config.AuthorizationConstants;
-import org.openmbee.mms.data.domains.global.Group;
-import org.openmbee.mms.data.domains.global.User;
+import org.openmbee.mms.json.GroupJson;
+import org.openmbee.mms.json.UserJson;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -12,23 +12,24 @@ import java.util.Collection;
 
 class TwcUserDetails implements UserDetails {
 
-    private final User user;
+    private final UserJson user;
+    private final Collection<GroupJson> groups;
 
-    public TwcUserDetails(User user) {
+    public TwcUserDetails(UserJson user, Collection<GroupJson> groups) {
         this.user = user;
+        this.groups = groups;
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        Collection<Group> groups = user.getGroups();
         Collection<GrantedAuthority> authorities = new ArrayList<>();
 
         if (groups != null) {
-            for (Group group : groups) {
+            for (GroupJson group : groups) {
                 authorities.add(new SimpleGrantedAuthority(group.getName()));
             }
         }
-        if (user.isAdmin()) {
+        if (Boolean.TRUE.equals(user.isAdmin())) {
             authorities.add(new SimpleGrantedAuthority(AuthorizationConstants.MMSADMIN));
         }
         authorities.add(new SimpleGrantedAuthority(AuthorizationConstants.EVERYONE));
@@ -62,10 +63,10 @@ class TwcUserDetails implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return user.getEnabled();
+        return user.isEnabled();
     }
 
-    public User getUser() {
+    public UserJson getUser() {
         return user;
     }
 

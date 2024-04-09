@@ -18,8 +18,9 @@ import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.openmbee.mms.core.config.Constants;
 import org.openmbee.mms.core.config.ContextHolder;
-import org.openmbee.mms.core.dao.NodeDAO;
+import org.openmbee.mms.data.dao.NodeDAO;
 import org.openmbee.mms.core.exceptions.InternalErrorException;
 import org.openmbee.mms.core.objects.ElementsSearchResponse;
 import org.openmbee.mms.core.objects.Rejection;
@@ -100,7 +101,7 @@ public class ElasticSearchService implements SearchService {
 
             boolean showDeletedAsRejected = false;
             String showDeleted = params.remove(SearchConstants.SHOW_DELETED_FIELD);
-            if(showDeleted != null && showDeleted.equals("true")) {
+            if(showDeleted != null && showDeleted.equals(Constants.TRUE)) {
                 showDeletedAsRejected = true;
             }
 

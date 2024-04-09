@@ -33,6 +33,9 @@ ext {
         'jackson-databind'              : "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion",
         'jackson-datatype-hibernate5'   : "com.fasterxml.jackson.datatype:jackson-datatype-hibernate5:$jacksonVersion",
         'jackson-datatype-jsr310'       : "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion",
+        'jjwt-api'                      : "io.jsonwebtoken:jjwt-api:$jwtTokenVersion",
+        'jjwt-impl'                     : "io.jsonwebtoken:jjwt-impl:$jwtTokenVersion",
+        'jjwt-jackson'                  : "io.jsonwebtoken:jjwt-jackson:$jwtTokenVersion",
         'spring-boot-starter-test'      : 'org.springframework.boot:spring-boot-starter-test:2.2.4.RELEASE'
     ]
 }

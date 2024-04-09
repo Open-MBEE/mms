@@ -1,8 +1,15 @@
 dependencies {
     implementation project(':core')
+    implementation project(':data')
     implementation project(':search')
 
     implementation "org.elasticsearch.client:elasticsearch-rest-high-level-client:$elasticVersion"
 
     testImplementation commonDependencies.'spring-boot-starter-test'
+}
+
+tasks {
+    processResources {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    }
 }

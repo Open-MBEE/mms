@@ -4,16 +4,16 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
+import org.openmbee.mms.core.dao.BranchPersistence;
+import org.openmbee.mms.core.dao.ProjectPersistence;
 import org.openmbee.mms.core.exceptions.NotFoundException;
 import org.openmbee.mms.core.config.ContextHolder;
-import org.openmbee.mms.core.dao.BranchDAO;
-import org.openmbee.mms.core.dao.OrgDAO;
-import org.openmbee.mms.core.dao.ProjectDAO;
+import org.openmbee.mms.core.dao.OrgPersistence;
 import org.openmbee.mms.core.services.PermissionService;
 import org.openmbee.mms.core.utils.AuthenticationUtils;
-import org.openmbee.mms.data.domains.global.Organization;
-import org.openmbee.mms.data.domains.global.Project;
-import org.openmbee.mms.data.domains.scoped.Branch;
+import org.openmbee.mms.json.OrgJson;
+import org.openmbee.mms.json.ProjectJson;
+import org.openmbee.mms.json.RefJson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -23,9 +23,9 @@ import org.springframework.stereotype.Service;
 public class MethodSecurityService {
 
     private PermissionService permissionService;
-    private ProjectDAO projectRepository;
-    private BranchDAO branchRepository;
-    private OrgDAO orgRepository;
+    private ProjectPersistence projectPersistence;
+    private BranchPersistence branchPersistence;
+    private OrgPersistence orgPersistence;
 
     @Autowired
     public void setPermissionService(PermissionService permissionService) {
@@ -33,20 +33,19 @@ public class MethodSecurityService {
     }
 
     @Autowired
-    public void setOrgRepository(OrgDAO orgRepository) {
-        this.orgRepository = orgRepository;
+    public void setOrgPersistence(OrgPersistence orgPersistence) {
+        this.orgPersistence = orgPersistence;
     }
 
     @Autowired
-    public void setProjectRepository(ProjectDAO projectRepository) {
-        this.projectRepository = projectRepository;
+    public void setProjectPersistence(ProjectPersistence projectPersistence) {
+        this.projectPersistence = projectPersistence;
     }
 
     @Autowired
-    public void setBranchRepository(BranchDAO branchRepository) {
-        this.branchRepository = branchRepository;
+    public void setBranchPersistence(BranchPersistence branchPersistence) {
+        this.branchPersistence = branchPersistence;
     }
-
 
     public boolean hasOrgPrivilege(Authentication authentication, String orgId, String privilege, boolean allowAnonIfPublic) {
         CompletableFuture<Boolean> permissionsFuture = CompletableFuture.supplyAsync(() ->
@@ -106,13 +105,13 @@ public class MethodSecurityService {
     }
 
     private boolean orgExists(String orgId) {
-        Optional<Organization> o = orgRepository.findByOrganizationId(orgId);
+        Optional<OrgJson> o = orgPersistence.findById(orgId);
         return o.isPresent();
     }
 
     private boolean projectExists(String projectId) {
         ContextHolder.getContext().setProjectId(projectId);
-        Optional<Project> p = projectRepository.findByProjectId(projectId);
+        Optional<ProjectJson> p = projectPersistence.findById(projectId);
         return p.isPresent();
     }
 
@@ -120,16 +119,16 @@ public class MethodSecurityService {
         if(! projectExists(projectId)) {
             return false;
         }
-        Optional<Branch> branchesOption = branchRepository.findByBranchId(branchId);
+        Optional<RefJson> branchesOption = branchPersistence.findById(projectId, branchId);
         return branchesOption.isPresent();
     }
 
     private boolean completeFutures(CompletableFuture<Boolean> permissionsFuture, CompletableFuture<Boolean> existsFuture, String context) {
         try {
-            if (!permissionsFuture.join()) {
+            if (!isBooleanFutureTrue(permissionsFuture)){
                 return false;
             }
-            if (!existsFuture.join()) {
+            if (!isBooleanFutureTrue(existsFuture)){
                 throw new NotFoundException(context + " not found");
             }
             return true;
@@ -139,5 +138,13 @@ public class MethodSecurityService {
             }
             return false;
         }
+    }
+
+    private boolean isBooleanFutureTrue(CompletableFuture<Boolean> future) {
+        if(future != null) {
+            Boolean joinResult = future.join();
+            return joinResult != null && joinResult;
+        }
+        return false;
     }
 }

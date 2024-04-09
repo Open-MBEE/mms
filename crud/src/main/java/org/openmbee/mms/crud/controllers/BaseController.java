@@ -3,7 +3,8 @@ package org.openmbee.mms.crud.controllers;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import org.openmbee.mms.core.dao.ProjectDAO;
+import org.openmbee.mms.core.dao.BranchPersistence;
+import org.openmbee.mms.core.dao.ProjectPersistence;
 import org.openmbee.mms.core.exceptions.BadRequestException;
 import org.openmbee.mms.core.exceptions.ConflictException;
 import org.openmbee.mms.core.exceptions.DeletedException;
@@ -18,7 +19,8 @@ import org.openmbee.mms.core.security.MethodSecurityService;
 import org.openmbee.mms.core.services.NodeService;
 import org.openmbee.mms.core.services.PermissionService;
 import org.openmbee.mms.crud.services.ServiceFactory;
-import org.openmbee.mms.data.domains.global.Project;
+import org.openmbee.mms.json.ProjectJson;
+import org.openmbee.mms.json.RefJson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,7 +37,9 @@ public abstract class BaseController {
 
     protected ServiceFactory serviceFactory;
 
-    protected ProjectDAO projectRepository;
+    protected ProjectPersistence projectPersistence;
+
+    protected BranchPersistence branchPersistence;
 
     protected PermissionService permissionService;
 
@@ -47,8 +51,13 @@ public abstract class BaseController {
     }
 
     @Autowired
-    public void setProjectRepository(ProjectDAO projectRepository) {
-        this.projectRepository = projectRepository;
+    public void setProjectPersistence(ProjectPersistence projectPersistence) {
+        this.projectPersistence = projectPersistence;
+    }
+
+    @Autowired
+    public void setBranchPersistence(BranchPersistence branchPersistence) {
+        this.branchPersistence = branchPersistence;
     }
 
     @Autowired
@@ -70,8 +79,16 @@ public abstract class BaseController {
         return om.convertValue(obj, new TypeReference<Map<String, Object>>() {});
     }
 
+    protected void findBranch(String projectId, String id){
+        getProjectType(projectId);
+        Optional<RefJson> branchesOption = branchPersistence.findById(projectId, id);
+        if (!branchesOption.isPresent()) {
+            throw new NotFoundException("branch not found");
+        }
+    }
+
     protected String getProjectType(String projectId) {
-        Optional<Project> p = projectRepository.findByProjectId(projectId);
+        Optional<ProjectJson> p = projectPersistence.findById(projectId);
         if (p.isPresent()) {
             return p.get().getProjectType();
         }

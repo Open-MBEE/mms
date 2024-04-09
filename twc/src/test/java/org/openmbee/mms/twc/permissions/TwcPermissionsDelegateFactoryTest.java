@@ -1,10 +1,11 @@
 package org.openmbee.mms.twc.permissions;
 
 import org.junit.Test;
+import org.openmbee.mms.core.dao.ProjectPersistence;
 import org.openmbee.mms.core.delegation.PermissionsDelegate;
-import org.openmbee.mms.data.domains.global.Branch;
-import org.openmbee.mms.data.domains.global.Organization;
-import org.openmbee.mms.data.domains.global.Project;
+import org.openmbee.mms.json.OrgJson;
+import org.openmbee.mms.json.ProjectJson;
+import org.openmbee.mms.json.RefJson;
 import org.openmbee.mms.twc.TeamworkCloud;
 import org.openmbee.mms.twc.config.TwcConfig;
 import org.openmbee.mms.twc.exceptions.TwcConfigurationException;
@@ -12,6 +13,8 @@ import org.openmbee.mms.twc.metadata.TwcMetadata;
 import org.openmbee.mms.twc.metadata.TwcMetadataService;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.context.ApplicationContext;
+
+import java.util.Optional;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -23,6 +26,7 @@ public class TwcPermissionsDelegateFactoryTest {
     public void testTwcOrg() {
         ApplicationContext applicationContext = mock(ApplicationContext.class);
         TwcConfig twcConfig = mock(TwcConfig.class);
+        when(twcConfig.isUseAuthDelegation()).thenReturn(true);
         TwcMetadataService twcMetadataService = mock(TwcMetadataService.class);
 
         when(twcConfig.isUseAuthDelegation()).thenReturn(true);
@@ -33,7 +37,7 @@ public class TwcPermissionsDelegateFactoryTest {
         twcPermissionsDelegateFactory.setTwcMetadataService(twcMetadataService);
 
         //These are not supported
-        assertNull( twcPermissionsDelegateFactory.getPermissionsDelegate(new Organization()));
+        assertNull( twcPermissionsDelegateFactory.getPermissionsDelegate(new OrgJson()));
     }
 
     @Test
@@ -41,16 +45,15 @@ public class TwcPermissionsDelegateFactoryTest {
 
         ApplicationContext applicationContext = mock(ApplicationContext.class);
         TwcConfig twcConfig = mock(TwcConfig.class);
-        TwcMetadataService twcMetadataService = mock(TwcMetadataService.class);
-
         when(twcConfig.isUseAuthDelegation()).thenReturn(true);
+        TwcMetadataService twcMetadataService = mock(TwcMetadataService.class);
 
         TwcPermissionsDelegateFactory twcPermissionsDelegateFactory = new TwcPermissionsDelegateFactory();
         twcPermissionsDelegateFactory.setApplicationContext(applicationContext);
         twcPermissionsDelegateFactory.setTwcConfig(twcConfig);
         twcPermissionsDelegateFactory.setTwcMetadataService(twcMetadataService);
 
-        Project project = new Project();
+        ProjectJson project = new ProjectJson();
         TwcMetadata twcMetadata = new TwcMetadata();
         twcMetadata.setHost("host");
         twcMetadata.setWorkspaceId("workspace");
@@ -81,6 +84,7 @@ public class TwcPermissionsDelegateFactoryTest {
     public void testTwcProjectDoesNotMatchTwc() {
         ApplicationContext applicationContext = mock(ApplicationContext.class);
         TwcConfig twcConfig = mock(TwcConfig.class);
+        when(twcConfig.isUseAuthDelegation()).thenReturn(true);
         TwcMetadataService twcMetadataService = mock(TwcMetadataService.class);
 
         when(twcConfig.isUseAuthDelegation()).thenReturn(true);
@@ -90,7 +94,7 @@ public class TwcPermissionsDelegateFactoryTest {
         twcPermissionsDelegateFactory.setTwcConfig(twcConfig);
         twcPermissionsDelegateFactory.setTwcMetadataService(twcMetadataService);
 
-        Project project = new Project();
+        ProjectJson project = new ProjectJson();
         TwcMetadata twcMetadata = new TwcMetadata();
         twcMetadata.setHost("host");
         twcMetadata.setWorkspaceId("workspace");
@@ -110,6 +114,7 @@ public class TwcPermissionsDelegateFactoryTest {
     public void testTwcProjectIncompleteMetadata() {
         ApplicationContext applicationContext = mock(ApplicationContext.class);
         TwcConfig twcConfig = mock(TwcConfig.class);
+        when(twcConfig.isUseAuthDelegation()).thenReturn(true);
         TwcMetadataService twcMetadataService = mock(TwcMetadataService.class);
 
         TwcPermissionsDelegateFactory twcPermissionsDelegateFactory = new TwcPermissionsDelegateFactory();
@@ -117,7 +122,7 @@ public class TwcPermissionsDelegateFactoryTest {
         twcPermissionsDelegateFactory.setTwcConfig(twcConfig);
         twcPermissionsDelegateFactory.setTwcMetadataService(twcMetadataService);
 
-        Project project = new Project();
+        ProjectJson project = new ProjectJson();
         TwcMetadata twcMetadata = new TwcMetadata();
         twcMetadata.setHost("host");
         twcMetadata.setWorkspaceId("workspace");
@@ -134,6 +139,7 @@ public class TwcPermissionsDelegateFactoryTest {
     public void testTwcProjectNullMetadata() {
         ApplicationContext applicationContext = mock(ApplicationContext.class);
         TwcConfig twcConfig = mock(TwcConfig.class);
+        when(twcConfig.isUseAuthDelegation()).thenReturn(true);
         TwcMetadataService twcMetadataService = mock(TwcMetadataService.class);
 
         TwcPermissionsDelegateFactory twcPermissionsDelegateFactory = new TwcPermissionsDelegateFactory();
@@ -141,7 +147,7 @@ public class TwcPermissionsDelegateFactoryTest {
         twcPermissionsDelegateFactory.setTwcConfig(twcConfig);
         twcPermissionsDelegateFactory.setTwcMetadataService(twcMetadataService);
 
-        Project project = new Project();
+        ProjectJson project = new ProjectJson();
 
         when(twcMetadataService.getTwcMetadata(project)).thenReturn(null);
 
@@ -156,7 +162,9 @@ public class TwcPermissionsDelegateFactoryTest {
 
         ApplicationContext applicationContext = mock(ApplicationContext.class);
         TwcConfig twcConfig = mock(TwcConfig.class);
+        when(twcConfig.isUseAuthDelegation()).thenReturn(true);
         TwcMetadataService twcMetadataService = mock(TwcMetadataService.class);
+        ProjectPersistence projectPersistence = mock(ProjectPersistence.class);
 
         when(twcConfig.isUseAuthDelegation()).thenReturn(true);
 
@@ -164,16 +172,19 @@ public class TwcPermissionsDelegateFactoryTest {
         twcPermissionsDelegateFactory.setApplicationContext(applicationContext);
         twcPermissionsDelegateFactory.setTwcConfig(twcConfig);
         twcPermissionsDelegateFactory.setTwcMetadataService(twcMetadataService);
+        twcPermissionsDelegateFactory.setProjectPersistence(projectPersistence);
 
-        Project project = new Project();
-        Branch branch = new Branch();
-        branch.setProject(project);
+        ProjectJson project = new ProjectJson();
+        RefJson branch = new RefJson();
+        String projectId = "projectid";
+        branch.setProjectId(projectId);
 
         TwcMetadata twcMetadata = new TwcMetadata();
         twcMetadata.setHost("host");
         twcMetadata.setWorkspaceId("workspace");
         twcMetadata.setResourceId("resource");
 
+        when(projectPersistence.findById(projectId)).thenReturn(Optional.of(project));
         when(twcMetadataService.getTwcMetadata(project)).thenReturn(twcMetadata);
 
         TeamworkCloud teamworkCloud = new TeamworkCloud();
@@ -199,7 +210,9 @@ public class TwcPermissionsDelegateFactoryTest {
     public void testTwcBranchDoesNotMatchTwc() {
         ApplicationContext applicationContext = mock(ApplicationContext.class);
         TwcConfig twcConfig = mock(TwcConfig.class);
+        when(twcConfig.isUseAuthDelegation()).thenReturn(true);
         TwcMetadataService twcMetadataService = mock(TwcMetadataService.class);
+        ProjectPersistence projectPersistence = mock(ProjectPersistence.class);
 
         when(twcConfig.isUseAuthDelegation()).thenReturn(true);
 
@@ -207,16 +220,19 @@ public class TwcPermissionsDelegateFactoryTest {
         twcPermissionsDelegateFactory.setApplicationContext(applicationContext);
         twcPermissionsDelegateFactory.setTwcConfig(twcConfig);
         twcPermissionsDelegateFactory.setTwcMetadataService(twcMetadataService);
+        twcPermissionsDelegateFactory.setProjectPersistence(projectPersistence);
 
-        Project project = new Project();
-        Branch branch = new Branch();
-        branch.setProject(project);
+        ProjectJson project = new ProjectJson();
+        RefJson branch = new RefJson();
+        String projectId = "projectid";
+        branch.setProjectId(projectId);
 
         TwcMetadata twcMetadata = new TwcMetadata();
         twcMetadata.setHost("host");
         twcMetadata.setWorkspaceId("workspace");
         twcMetadata.setResourceId("resource");
 
+        when(projectPersistence.findById(projectId)).thenReturn(Optional.of(project));
         when(twcMetadataService.getTwcMetadata(project)).thenReturn(twcMetadata);
 
         when(twcConfig.getTeamworkCloud("host")).thenReturn(null);
@@ -231,22 +247,27 @@ public class TwcPermissionsDelegateFactoryTest {
     public void testTwcBranchIncompleteMetadata() {
         ApplicationContext applicationContext = mock(ApplicationContext.class);
         TwcConfig twcConfig = mock(TwcConfig.class);
+        when(twcConfig.isUseAuthDelegation()).thenReturn(true);
         TwcMetadataService twcMetadataService = mock(TwcMetadataService.class);
+        ProjectPersistence projectPersistence = mock(ProjectPersistence.class);
 
         TwcPermissionsDelegateFactory twcPermissionsDelegateFactory = new TwcPermissionsDelegateFactory();
         twcPermissionsDelegateFactory.setApplicationContext(applicationContext);
         twcPermissionsDelegateFactory.setTwcConfig(twcConfig);
         twcPermissionsDelegateFactory.setTwcMetadataService(twcMetadataService);
+        twcPermissionsDelegateFactory.setProjectPersistence(projectPersistence);
 
-        Project project = new Project();
-        Branch branch = new Branch();
-        branch.setProject(project);
+        ProjectJson project = new ProjectJson();
+        RefJson branch = new RefJson();
+        String projectId = "projectid";
+        branch.setProjectId(projectId);
 
         TwcMetadata twcMetadata = new TwcMetadata();
         twcMetadata.setHost("host");
         twcMetadata.setWorkspaceId("workspace");
         //twcMetadata.setResourceId("resource"); //Resource is missing
 
+        when(projectPersistence.findById(projectId)).thenReturn(Optional.of(project));
         when(twcMetadataService.getTwcMetadata(project)).thenReturn(twcMetadata);
 
         PermissionsDelegate delegate = twcPermissionsDelegateFactory.getPermissionsDelegate(branch);
@@ -258,17 +279,22 @@ public class TwcPermissionsDelegateFactoryTest {
     public void testTwcBranchNullMetadata() {
         ApplicationContext applicationContext = mock(ApplicationContext.class);
         TwcConfig twcConfig = mock(TwcConfig.class);
+        when(twcConfig.isUseAuthDelegation()).thenReturn(true);
         TwcMetadataService twcMetadataService = mock(TwcMetadataService.class);
+        ProjectPersistence projectPersistence = mock(ProjectPersistence.class);
 
         TwcPermissionsDelegateFactory twcPermissionsDelegateFactory = new TwcPermissionsDelegateFactory();
         twcPermissionsDelegateFactory.setApplicationContext(applicationContext);
         twcPermissionsDelegateFactory.setTwcConfig(twcConfig);
         twcPermissionsDelegateFactory.setTwcMetadataService(twcMetadataService);
+        twcPermissionsDelegateFactory.setProjectPersistence(projectPersistence);
 
-        Project project = new Project();
-        Branch branch = new Branch();
-        branch.setProject(project);
+        ProjectJson project = new ProjectJson();
+        RefJson branch = new RefJson();
+        String projectId = "projectid";
+        branch.setProjectId(projectId);
 
+        when(projectPersistence.findById(projectId)).thenReturn(Optional.of(project));
         when(twcMetadataService.getTwcMetadata(project)).thenReturn(null);
 
         PermissionsDelegate delegate = twcPermissionsDelegateFactory.getPermissionsDelegate(branch);

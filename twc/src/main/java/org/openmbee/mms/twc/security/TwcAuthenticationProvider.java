@@ -14,13 +14,13 @@ import org.springframework.web.client.RestTemplate;
 
 public class TwcAuthenticationProvider {
 
-    RestUtils restUtils;
+	RestUtils restUtils;
 
 	private TeamworkCloud twc;
-	
+
 	public TwcAuthenticationProvider(RestUtils restTemplateFactory, TeamworkCloud twc) {
-	    this.restUtils = restTemplateFactory;
-	    this.twc = twc;
+		this.restUtils = restTemplateFactory;
+		this.twc = twc;
 	}
 
 	public String getAuthentication(String authToken)  {
@@ -36,11 +36,12 @@ public class TwcAuthenticationProvider {
 		String loggedInUser = restUtils.getCookieValue(respEntity, TwcConstants.TWCCURRENTUSER);
 		return loggedInUser;
 	}
-
 	
 	private ResponseEntity<RestResponse> checkAuthentication(String authToken) {
-        RestTemplate restTemplate = restUtils.getRestTemplate();
+		RestTemplate restTemplate = restUtils.getRestTemplate();
 		HttpHeaders headers = new HttpHeaders();
+		//2021x R2 - found iss of handling token format
+		authToken = authToken.replace(":", "");
 		headers.set(RestUtils.AUTHORIZATION, authToken);
 
 		ResponseEntity<RestResponse> respEntity = null;

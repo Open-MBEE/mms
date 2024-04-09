@@ -1,12 +1,13 @@
 package org.openmbee.mms.twc.permissions;
 
+import org.openmbee.mms.core.dao.ProjectPersistence;
 import org.openmbee.mms.core.delegation.PermissionsDelegate;
 import org.openmbee.mms.core.delegation.PermissionsDelegateFactory;
+import org.openmbee.mms.json.OrgJson;
+import org.openmbee.mms.json.ProjectJson;
+import org.openmbee.mms.json.RefJson;
 import org.openmbee.mms.twc.TeamworkCloud;
 import org.openmbee.mms.core.exceptions.NotFoundException;
-import org.openmbee.mms.data.domains.global.Branch;
-import org.openmbee.mms.data.domains.global.Organization;
-import org.openmbee.mms.data.domains.global.Project;
 import org.openmbee.mms.twc.config.TwcConfig;
 import org.openmbee.mms.twc.exceptions.TwcConfigurationException;
 import org.openmbee.mms.twc.metadata.TwcMetadata;
@@ -15,13 +16,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpStatus;
 
+import java.util.Optional;
 
 public class TwcPermissionsDelegateFactory implements PermissionsDelegateFactory {
 
     private ApplicationContext applicationContext;
     private TwcConfig twcConfig;
     private TwcMetadataService twcMetadataService;
-
+    private ProjectPersistence projectPersistence;
 
     @Autowired
     public void setApplicationContext(ApplicationContext applicationContext) {
@@ -38,8 +40,13 @@ public class TwcPermissionsDelegateFactory implements PermissionsDelegateFactory
         this.twcMetadataService = twcMetadataService;
     }
 
+    @Autowired
+    public void setProjectPersistence(ProjectPersistence projectPersistence) {
+        this.projectPersistence = projectPersistence;
+    }
+
     @Override
-    public PermissionsDelegate getPermissionsDelegate(Project project) {
+    public PermissionsDelegate getPermissionsDelegate(ProjectJson project) {
         if(!twcConfig.isUseAuthDelegation()) {
             return null;
         }
@@ -54,7 +61,7 @@ public class TwcPermissionsDelegateFactory implements PermissionsDelegateFactory
     }
 
     @Override
-    public PermissionsDelegate getPermissionsDelegate(Organization organization) {
+    public PermissionsDelegate getPermissionsDelegate(OrgJson organization) {
         if(!twcConfig.isUseAuthDelegation()) {
             return null;
         }
@@ -64,17 +71,22 @@ public class TwcPermissionsDelegateFactory implements PermissionsDelegateFactory
     }
 
     @Override
-    public PermissionsDelegate getPermissionsDelegate(Branch branch) {
+    public PermissionsDelegate getPermissionsDelegate(RefJson branch) {
         if(!twcConfig.isUseAuthDelegation()) {
             return null;
         }
 
-        TwcProjectDetails twcProjectDetails = getTwcDetails(branch.getProject());
+        Optional<ProjectJson> projectOptional = projectPersistence.findById(branch.getProjectId());
+
+        if(projectOptional.isEmpty()) {
+            throw new NotFoundException("project not found");
+        }
+
+        TwcProjectDetails twcProjectDetails = getTwcDetails(projectOptional.get());
         if(twcProjectDetails != null) {
             return autowire(new TwcBranchPermissionsDelegate(branch, twcProjectDetails.getTeamworkCloud(),
                 twcProjectDetails.getWorkspaceId(), twcProjectDetails.getResourceId()));
         }
-
         return null;
     }
 
@@ -114,7 +126,7 @@ public class TwcPermissionsDelegateFactory implements PermissionsDelegateFactory
         }
     }
 
-    private TwcProjectDetails getTwcDetails(Project project) {
+    private TwcProjectDetails getTwcDetails(ProjectJson project) {
         TwcMetadata twcMetadata = null;
         try {
             twcMetadata = twcMetadataService.getTwcMetadata(project);
@@ -129,7 +141,7 @@ public class TwcPermissionsDelegateFactory implements PermissionsDelegateFactory
 
         if(teamworkCloud == null) {
             throw new TwcConfigurationException(HttpStatus.FAILED_DEPENDENCY,
-                "Project " + project.getProjectId() + " (" + project.getProjectName()
+                "Project " + project.getProjectId() + " (" + project.getName()
                     + ") is associated with an untrusted TWC host (" + twcMetadata.getHost() + ")");
         }
 

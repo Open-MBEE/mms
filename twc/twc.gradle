@@ -1,5 +1,4 @@
 dependencies {
-    implementation project(':rdb')
     implementation project(':crud')
     
     
@@ -11,4 +10,9 @@ dependencies {
     implementation 'org.json:json:20190722'
 
     testImplementation commonDependencies.'spring-boot-starter-test'
+}
+tasks {
+    processResources {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    }
 }

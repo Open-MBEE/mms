@@ -1,3 +1,9 @@
 dependencies {
-    implementation project(':rdb')
+    implementation project(':core')
+}
+
+tasks {
+    processResources {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    }
 }

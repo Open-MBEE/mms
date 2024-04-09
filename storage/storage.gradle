@@ -7,3 +7,9 @@ dependencies {
 
     testImplementation commonDependencies.'spring-boot-starter-test'
 }
+
+tasks {
+    processResources {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    }
+}

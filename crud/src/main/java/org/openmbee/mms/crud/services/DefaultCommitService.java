@@ -1,55 +1,39 @@
 package org.openmbee.mms.crud.services;
 
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
-import org.openmbee.mms.core.config.ContextHolder;
 import org.openmbee.mms.core.config.Formats;
 import org.openmbee.mms.core.exceptions.BadRequestException;
-import org.openmbee.mms.core.exceptions.InternalErrorException;
 import org.openmbee.mms.core.exceptions.NotFoundException;
-import org.openmbee.mms.core.dao.BranchDAO;
+import org.openmbee.mms.core.dao.*;
 import org.openmbee.mms.core.services.CommitService;
-import org.openmbee.mms.data.domains.scoped.Branch;
 import org.openmbee.mms.json.CommitJson;
+import org.openmbee.mms.json.RefJson;
 import org.openmbee.mms.core.objects.CommitsRequest;
 import org.openmbee.mms.core.objects.CommitsResponse;
-import org.openmbee.mms.data.domains.scoped.Commit;
-import org.openmbee.mms.core.dao.CommitDAO;
-import org.openmbee.mms.core.dao.CommitIndexDAO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service("defaultCommitService")
 public class DefaultCommitService implements CommitService {
-    protected CommitDAO commitRepository;
-    private CommitIndexDAO commitIndex;
-    private BranchDAO branchRepository;
+    protected CommitPersistence commitPersistence;
+    protected BranchPersistence branchPersistence;
 
     @Autowired
-    public void setCommitDao(CommitDAO commitDao) {
-        this.commitRepository = commitDao;
+    public void setCommitPersistence(CommitPersistence commitPersistence) {
+        this.commitPersistence = commitPersistence;
     }
 
     @Autowired
-    public void setBranchRepository(BranchDAO branchRepository) {
-        this.branchRepository = branchRepository;
-    }
-
-    @Autowired
-    public void setCommitElasticDao(CommitIndexDAO commitElasticRepository) {
-        this.commitIndex = commitElasticRepository;
+    public void setBranchPersistence(BranchPersistence branchPersistence) {
+        this.branchPersistence = branchPersistence;
     }
 
     @Override
     public CommitsResponse getRefCommits(String projectId, String refId, Map<String, String> params) {
-        ContextHolder.setContext(projectId, refId);
         int limit = 0;
         Instant timestamp = null;
         if (params.containsKey("limit")) {
@@ -57,14 +41,14 @@ public class DefaultCommitService implements CommitService {
         }
         if (params.containsKey("maxTimestamp")) {
             try {
-                timestamp = Formats.SDF.parse(params.get("maxTimestamp")).toInstant();
+                timestamp = new SimpleDateFormat(Formats.DATE_FORMAT).parse(params.get("maxTimestamp")).toInstant();
             } catch (ParseException e) {
                 e.printStackTrace();
                 throw new BadRequestException("maxTimestamp parse error, use " +
                     Formats.FORMATTER.format(Instant.now()) + " as example");
             }
         }
-        Optional<Branch> ref = branchRepository.findByBranchId(refId);
+        Optional<RefJson> ref = branchPersistence.findById(projectId, refId);
         List<CommitJson> resJson = new ArrayList<>();
         CommitsResponse res = new CommitsResponse();
 
@@ -72,17 +56,9 @@ public class DefaultCommitService implements CommitService {
         Instant finalTimestamp = timestamp;
 
         ref.ifPresentOrElse(branch -> {
-            List<Commit> commits = commitRepository.findByRefAndTimestampAndLimit(branch, finalTimestamp, finalLimit);
-            for (Commit c : commits) {
-                CommitJson json = new CommitJson();
-                json.setCreated(Formats.FORMATTER.format(c.getTimestamp()));
-                json.setCreator(c.getCreator());
-                json.setId(c.getCommitId());
-                json.setComment(c.getComment());
-                json.setRefId(c.getBranchId());
-                json.setProjectId(projectId);
-                resJson.add(json);
-            }
+            //branch for case that finalTimestamp is null AND/OR finalLimit is 0
+            List<CommitJson> commits = commitPersistence.findByProjectAndRefAndTimestampAndLimit(projectId, refId, finalTimestamp, finalLimit);
+            resJson.addAll(commits);
         }, () -> {
             throw new NotFoundException("Branch not found");
         });
@@ -93,56 +69,46 @@ public class DefaultCommitService implements CommitService {
 
     @Override
     public CommitsResponse getCommit(String projectId, String commitId) {
-        ContextHolder.setContext(projectId);
         CommitsResponse res = new CommitsResponse();
-
-        Optional<CommitJson> commit = commitIndex.findById(commitId);
-        if (commit.isPresent()) {
-            res.getCommits().add(commit.get());
-        } else {
+        Optional<CommitJson> commit = commitPersistence.findById(projectId, commitId);
+        if (!commit.isPresent()) {
             throw new NotFoundException("Commit not found");
         }
+        res.getCommits().add(commit.get());
         return res;
     }
 
     @Override
     public CommitsResponse getElementCommits(String projectId, String refId, String elementId, Map<String, String> params) {
-        ContextHolder.setContext(projectId);
         CommitsResponse res = new CommitsResponse();
-        Optional<Branch> ref = branchRepository.findByBranchId(refId);
+        Optional<RefJson> ref = branchPersistence.findById(projectId, refId);
         if (!ref.isPresent()) {
             throw new NotFoundException("Branch not found");
         }
-        List<Commit> refCommits = commitRepository.findByRefAndTimestampAndLimit(ref.get(), null, 0);
-        Set<String> commitIds = new HashSet<>();
-        for (Commit commit: refCommits) {
-            commitIds.add(commit.getCommitId());
-        }
-        res.getCommits().addAll(commitIndex.elementHistory(elementId, commitIds));
+        res.getCommits().addAll(commitPersistence.elementHistory(projectId, refId, elementId));
         return res;
     }
 
     @Override
     public CommitsResponse getCommits(String projectId, CommitsRequest req) {
-        ContextHolder.setContext(projectId);
         Set<String> ids = new HashSet<>();
         for (CommitJson j : req.getCommits()) {
             ids.add(j.getId());
         }
         CommitsResponse res = new CommitsResponse();
-        try {
-            res.getCommits().addAll(commitIndex.findAllById(ids));
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new InternalErrorException(e);
+        List<CommitJson> commitJsonList = commitPersistence.findAllById(projectId, ids);
+        if (commitJsonList.isEmpty()) {
+            throw new NotFoundException("Commit not found");
         }
+
+        res.getCommits().addAll(commitJsonList);
         return res;
     }
 
     @Override
     public boolean isProjectNew(String projectId) {
-        ContextHolder.setContext(projectId);
-        List<Commit> commits = commitRepository.findAll();
+        // if project is not new, there must be at least 1 commit to master
+        List<CommitJson> commits = commitPersistence.findByProjectAndRefAndTimestampAndLimit(projectId, "master", null, 1);
         return commits == null || commits.isEmpty();
     }
 }

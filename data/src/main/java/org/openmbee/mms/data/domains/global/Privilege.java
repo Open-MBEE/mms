@@ -1,10 +1,7 @@
 package org.openmbee.mms.data.domains.global;
 
 import java.util.Set;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.ManyToMany;
-import javax.persistence.Table;
+import javax.persistence.*;
 
 @Entity
 @Table(name = "privileges")
@@ -13,7 +10,7 @@ public class Privilege extends Base {
     @Column(unique = true)
     private String name;
 
-    @ManyToMany(mappedBy = "privileges")
+    @ManyToMany(mappedBy = "privileges", fetch = FetchType.EAGER)
     private Set<Role> roles;
 
     public Privilege() {

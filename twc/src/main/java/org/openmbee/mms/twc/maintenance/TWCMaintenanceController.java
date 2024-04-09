@@ -1,16 +1,15 @@
 package org.openmbee.mms.twc.maintenance;
 
 import org.openmbee.mms.core.config.AuthorizationConstants;
+import org.openmbee.mms.core.dao.ProjectPersistence;
 import org.openmbee.mms.core.exceptions.InternalErrorException;
 import org.openmbee.mms.core.exceptions.NotFoundException;
-import org.openmbee.mms.data.domains.global.Project;
-import org.openmbee.mms.rdb.repositories.ProjectRepository;
+import org.openmbee.mms.json.ProjectJson;
 import org.openmbee.mms.twc.metadata.TwcMetadata;
 import org.openmbee.mms.twc.metadata.TwcMetadataService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
@@ -20,12 +19,12 @@ import java.util.Optional;
 @RequestMapping("/adm/maintenance")
 public class TWCMaintenanceController {
 
-    private ProjectRepository projectRepo;
+    private ProjectPersistence projectPersistence;
     private TwcMetadataService twcMetadataService;
 
     @Autowired
-    public void setProjectRepo(ProjectRepository projectRepo){
-        this.projectRepo = projectRepo;
+    public void setProjectPersistence(ProjectPersistence projectPersistence) {
+        this.projectPersistence = projectPersistence;
     }
 
     @Autowired
@@ -33,23 +32,21 @@ public class TWCMaintenanceController {
         this.twcMetadataService = twcMetadataService;
     }
 
-    @Transactional
     @PreAuthorize(AuthorizationConstants.IS_MMSADMIN)
     @GetMapping(value = "/project/twcmetadata/{id}")
     @ResponseBody
-    public TwcMetadata  getProjectMetadata(@PathVariable String id){
-        Project project = getProject(id);
+    public TwcMetadata getProjectMetadata(@PathVariable String id){
+        ProjectJson project = getProject(id);
         return twcMetadataService.getTwcMetadata(project);
     }
 
 
-    @Transactional
     @PreAuthorize(AuthorizationConstants.IS_MMSADMIN)
     @PostMapping(value = "/project/twcmetadata/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public void updateProjectMetadata(@PathVariable String id, @RequestBody TwcMetadata twcMetadata){
 
-        Project project = getProject(id);
+        ProjectJson project = getProject(id);
         try{
             twcMetadataService.updateTwcMetadata(project, twcMetadata);
         }
@@ -58,20 +55,19 @@ public class TWCMaintenanceController {
         }
     }
 
-    @Transactional
     @PreAuthorize(AuthorizationConstants.IS_MMSADMIN)
     @DeleteMapping(value = "/project/twcmetadata/{id}")
     @ResponseBody
     public void deleteProjectMetadata(@PathVariable String id){
-        Project project = getProject(id);
+        ProjectJson project = getProject(id);
         twcMetadataService.deleteTwcMetadata(project);
     }
 
-    private Project getProject(String projectId) {
+    private ProjectJson getProject(String projectId) {
 
-        Optional<Project> proj = projectRepo.findByProjectId(projectId);
+        Optional<ProjectJson> project = projectPersistence.findById(projectId);
 
-        return proj.orElseGet(() -> {
+        return project.orElseGet(() -> {
             String notFound = "Project id: " + projectId + " not found";
             throw new NotFoundException(notFound);
         });

@@ -1,0 +1,11 @@
+dependencies {
+    implementation project(':core')
+    implementation project(':crud')
+    implementation project(':data')
+    implementation project(':rdb')
+    implementation project(':webhooks')
+    implementation 'org.apache.commons:commons-lang3:3.10'
+    implementation commonDependencies.'spring-boot'
+
+    testImplementation commonDependencies.'spring-boot-starter-test'
+}

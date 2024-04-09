@@ -5,8 +5,8 @@ import org.openmbee.mms.core.objects.PermissionUpdatesResponse;
 
 public class PermissionUpdatesResponseBuilder {
 
-    private Boolean inherit;
-    private Boolean isPublic;
+    protected Boolean inherit;
+    protected Boolean isPublic;
     private PermissionUpdateResponseBuilder usersBuilder = new PermissionUpdateResponseBuilder();
     private PermissionUpdateResponseBuilder groupsBuilder = new PermissionUpdateResponseBuilder();
 
@@ -56,11 +56,11 @@ public class PermissionUpdatesResponseBuilder {
     }
 
     private Boolean or(Boolean a, Boolean b) {
-        if(a == b) {
-            return a;
-        }
-        if(a == null) {
+        if (a == null) {
             return b;
+        }
+        if (b == null) {
+            return a;
         }
         return a || b;
     }

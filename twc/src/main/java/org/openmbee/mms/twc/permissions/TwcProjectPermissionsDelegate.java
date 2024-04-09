@@ -5,8 +5,8 @@ import org.openmbee.mms.core.objects.PermissionResponse;
 import org.openmbee.mms.core.objects.PermissionUpdateRequest;
 import org.openmbee.mms.core.objects.PermissionUpdateResponse;
 import org.openmbee.mms.core.objects.PermissionUpdatesResponse;
-import org.openmbee.mms.data.domains.global.Project;
 
+import org.openmbee.mms.json.ProjectJson;
 import org.openmbee.mms.twc.TeamworkCloud;
 import org.openmbee.mms.twc.exceptions.TwcConfigurationException;
 import org.openmbee.mms.twc.utilities.TwcPermissionUtils;
@@ -17,7 +17,7 @@ import java.util.Set;
 
 public class TwcProjectPermissionsDelegate implements PermissionsDelegate {
 
-	private Project project;
+	private ProjectJson project;
 	private TeamworkCloud teamworkCloud;
 	private String workspaceId;
 	private String resourceId;
@@ -25,7 +25,7 @@ public class TwcProjectPermissionsDelegate implements PermissionsDelegate {
 	@Autowired
 	private TwcPermissionUtils twcPermissionUtils;
 
-	public TwcProjectPermissionsDelegate(Project project, TeamworkCloud teamworkCloud, String workspaceId,
+	public TwcProjectPermissionsDelegate(ProjectJson project, TeamworkCloud teamworkCloud, String workspaceId,
 			String resourceId) {
 		this.project = project;
 		this.teamworkCloud = teamworkCloud;
@@ -48,6 +48,13 @@ public class TwcProjectPermissionsDelegate implements PermissionsDelegate {
 	}
 
     @Override
+    public boolean hasGroupPermissions(String group, String privilege) {
+        throw new TwcConfigurationException(HttpStatus.BAD_REQUEST,
+            "Cannot Query Group Roles.  Permissions for this project are controlled by Teamwork Cloud ("
+                + teamworkCloud.getUrl() + ")");
+    }
+
+    @Override
     public void initializePermissions(String creator) {
         //Do nothing, permissions are already initialized in TWC
     }
@@ -63,7 +70,12 @@ public class TwcProjectPermissionsDelegate implements PermissionsDelegate {
         return false;
     }
 
-	@Override
+    @Override
+    public PermissionResponse getInherit() {
+        return PermissionResponse.getDefaultResponse();
+    }
+
+    @Override
 	public void setPublic(boolean isPublic) {
 		throw new TwcConfigurationException(HttpStatus.BAD_REQUEST,
 				"Cannot Modify Permissions.  Permissions for this project are controlled by Teamwork Cloud ("
@@ -107,7 +119,7 @@ public class TwcProjectPermissionsDelegate implements PermissionsDelegate {
 		return null;
 	}
 
-    public Project getProject() {
+    public ProjectJson getProject() {
         return project;
     }
 

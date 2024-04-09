@@ -6,7 +6,7 @@ import org.openmbee.mms.core.exceptions.BadRequestException;
 import org.openmbee.mms.core.exceptions.NotFoundException;
 import org.openmbee.mms.core.exceptions.UnauthorizedException;
 import org.openmbee.mms.core.utils.AuthenticationUtils;
-import org.openmbee.mms.data.domains.global.User;
+import org.openmbee.mms.json.UserJson;
 import org.openmbee.mms.localuser.security.UserCreateRequest;
 import org.openmbee.mms.localuser.security.UserDetailsServiceImpl;
 import org.openmbee.mms.localuser.security.UsersResponse;
@@ -15,10 +15,14 @@ import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
 
 @RestController
 @Tag(name = "Auth")
@@ -47,7 +51,7 @@ public class LocalUserController {
     @PreAuthorize("isAuthenticated()")
     public UsersResponse getUsers(@RequestParam(required = false) String user) {
         UsersResponse res = new UsersResponse();
-        List<User> users = new ArrayList<>();
+        Collection<UserJson> users = new ArrayList<>();
         if (user != null) {
             users.add(userDetailsService.loadUserByUsername(user).getUser());
         } else {

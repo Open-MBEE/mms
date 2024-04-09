@@ -1,96 +1,54 @@
 package org.openmbee.mms.crud.services;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.util.*;
-
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
+import org.openmbee.mms.core.dao.*;
 import org.openmbee.mms.core.exceptions.BadRequestException;
+import org.openmbee.mms.core.exceptions.ConflictException;
 import org.openmbee.mms.core.exceptions.InternalErrorException;
 import org.openmbee.mms.core.objects.ElementsCommitResponse;
+import org.openmbee.mms.core.objects.ElementsRequest;
+import org.openmbee.mms.core.objects.ElementsResponse;
 import org.openmbee.mms.core.objects.EventObject;
 import org.openmbee.mms.core.services.EventService;
 import org.openmbee.mms.core.services.NodeChangeInfo;
 import org.openmbee.mms.core.services.NodeGetInfo;
 import org.openmbee.mms.core.services.NodeService;
-import org.openmbee.mms.core.config.ContextHolder;
-import org.openmbee.mms.core.objects.ElementsRequest;
-import org.openmbee.mms.core.objects.ElementsResponse;
-import org.openmbee.mms.data.domains.scoped.Commit;
-import org.openmbee.mms.data.domains.scoped.CommitType;
-import org.openmbee.mms.data.domains.scoped.Node;
-import org.openmbee.mms.core.dao.CommitDAO;
-import org.openmbee.mms.core.dao.CommitIndexDAO;
-import org.openmbee.mms.core.dao.NodeDAO;
-import org.openmbee.mms.core.dao.NodeIndexDAO;
+import org.openmbee.mms.crud.CrudConstants;
+import org.openmbee.mms.json.BaseJson;
 import org.openmbee.mms.json.CommitJson;
 import org.openmbee.mms.json.ElementJson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.stream.Collectors;
+
 
 @Service("defaultNodeService")
 public class DefaultNodeService implements NodeService {
-
-    @Value("${mms.stream.batch.size:100000}")
-    protected int streamLimit;
-    protected final ObjectMapper objectMapper = new ObjectMapper();
-
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
-    protected NodeDAO nodeRepository;
-    protected CommitDAO commitRepository;
-    protected NodeIndexDAO nodeIndex;
-    //to save to this use base json classes
-    protected CommitIndexDAO commitIndex;
-    protected NodeGetHelper nodeGetHelper;
-    protected NodePostHelper nodePostHelper;
-    protected NodeDeleteHelper nodeDeleteHelper;
+    protected CommitPersistence commitPersistence;
+    protected NodePersistence nodePersistence;
 
     protected Collection<EventService> eventPublisher;
 
     @Autowired
-    public void setNodeRepository(NodeDAO nodeRepository) {
-        this.nodeRepository = nodeRepository;
+    public void setCommitPersistence(CommitPersistence commitPersistence) {
+        this.commitPersistence = commitPersistence;
     }
 
     @Autowired
-    public void setCommitRepository(CommitDAO commitRepository) {
-        this.commitRepository = commitRepository;
+    public void setNodePersistence(NodePersistence nodePersistence) {
+        this.nodePersistence = nodePersistence;
     }
 
-    @Autowired
-    public void setNodeIndex(NodeIndexDAO nodeIndex) {
-        this.nodeIndex = nodeIndex;
-    }
-
-    @Autowired
-    public void setCommitIndex(CommitIndexDAO commitIndex) {
-        this.commitIndex = commitIndex;
-    }
-
-    @Autowired
-    public void setNodePostHelper(NodePostHelper nodePostHelper) {
-        this.nodePostHelper = nodePostHelper;
-    }
-
-    @Autowired
-    public void setNodeDeleteHelper(NodeDeleteHelper nodeDeleteHelper) {
-        this.nodeDeleteHelper = nodeDeleteHelper;
-    }
-
-    @Autowired
-    public void setNodeGetHelper(NodeGetHelper nodeGetHelper) {
-        this.nodeGetHelper = nodeGetHelper;
+    public NodePersistence getNodePersistence() {
+        return nodePersistence;
     }
 
     @Autowired
@@ -99,53 +57,37 @@ public class DefaultNodeService implements NodeService {
     }
 
     @Override
-    public void readAsStream(String projectId, String refId,
-        Map<String, String> params, OutputStream stream, String accept) throws IOException {
+    public void readAsStream(String projectId, String refId, Map<String, String> params, OutputStream stream,
+            String accept) throws IOException {
 
-        String commitId = params.getOrDefault("commitId", null);
-        ContextHolder.setContext(projectId, refId);
-        List<Node> nodes;
-        String resCommitId;
+        String commitId = params.getOrDefault(CrudConstants.COMMITID, null);
+
         if (commitId != null && !commitId.isEmpty()) {
-            if (!commitRepository.findByCommitId(commitId).isPresent()) {
+            if (!commitPersistence.findById(projectId, commitId).isPresent()) {
                 throw new BadRequestException("commit id is invalid");
             }
-            nodes = nodeRepository.findAll();
-            resCommitId = commitId;
         } else {
-            nodes = nodeRepository.findAllByDeleted(false);
-            resCommitId = nodeGetHelper.getLatestRefCommitId();
+            Optional<CommitJson> commitJson = commitPersistence.findLatestByProjectAndRef(projectId, refId);
+            if (!commitJson.isPresent()) {
+                throw new InternalErrorException("Could not find latest commit for project and ref");
+            }
+            commitId = commitJson.get().getId();
         }
+
         String separator = "\n";
         if (!"application/x-ndjson".equals(accept)) {
-            String intro = "{\"commitId\":" + (resCommitId == null ? "null" : "\"" + resCommitId + "\"") + ",\"elements\":[";
+            String intro = "{\"commitId\":\"" + commitId + "\",\"elements\":[";
             stream.write(intro.getBytes(StandardCharsets.UTF_8));
             separator = ",";
         }
-        final String sep = separator;
-        AtomicInteger counter = new AtomicInteger();
-        batches(nodes, streamLimit).forEach(ns -> {
-            try {
-                if (counter.get() == 0) {
-                    counter.getAndIncrement();
-                } else {
-                    stream.write(sep.getBytes(StandardCharsets.UTF_8));
-                }
-                Collection<ElementJson> result = nodeGetHelper.processGetJsonFromNodes(ns, commitId, this)
-                    .getActiveElementMap().values();
-                stream.write(result.stream().map(this::toJson).collect(Collectors.joining(sep))
-                    .getBytes(StandardCharsets.UTF_8));
-            } catch (IOException ioe) {
-                logger.error("Error writing to stream", ioe);
-                throw new InternalErrorException("Error writing to stream.");
-            }
-        });
+
+        nodePersistence.streamAllAtCommit(projectId, refId, commitId, stream, separator);
+
         if (!"application/x-ndjson".equals(accept)) {
             stream.write("]}".getBytes(StandardCharsets.UTF_8));
         } else {
             stream.write("\n".getBytes(StandardCharsets.UTF_8));
         }
-        stream.close();
     }
 
     @Override
@@ -154,132 +96,122 @@ public class DefaultNodeService implements NodeService {
 
         if (id != null && !id.isEmpty()) {
             logger.debug("ElementId given: {}", id);
-
             ElementsRequest req = buildRequest(id);
             return read(projectId, refId, req, params);
-
-        } else {
-            // If no id is provided, return all
-            logger.debug("No ElementId given");
-            ContextHolder.setContext(projectId, refId);
-
-            ElementsResponse response = new ElementsResponse();
-            String commitId = params.getOrDefault("commitId", null);
-            response.getElements().addAll(nodeGetHelper.processGetAll(commitId, this));
-            if (commitId != null) {
-                response.setCommitId(commitId);
-            } else {
-                response.setCommitId(nodeGetHelper.getLatestRefCommitId());
-            }
-            return response;
         }
+        String commitId = params.getOrDefault(CrudConstants.COMMITID, null);
+        if (commitId == null) {
+            Optional<CommitJson> commitJson = commitPersistence.findLatestByProjectAndRef(projectId, refId);
+            if (!commitJson.isPresent()) {
+                throw new InternalErrorException("Could not find latest commit for project and ref");
+            }
+            commitId = commitJson.get().getId();
+        }
+        // If no id is provided, return all
+        ElementsResponse response = new ElementsResponse();
+        logger.debug("No ElementId given");
+
+        List<ElementJson> nodes = nodePersistence.findAll(projectId, refId, commitId);
+        response.getElements().addAll(nodes);
+        response.getElements().forEach(v -> v.setRefId(refId));
+        response.setCommitId(commitId);
+        return response;
     }
 
     @Override
     public ElementsResponse read(String projectId, String refId, ElementsRequest req,
         Map<String, String> params) {
 
-        String commitId = params.getOrDefault("commitId", null);
-        ContextHolder.setContext(projectId, refId);
+        String commitId = params.getOrDefault(CrudConstants.COMMITID, null);
+        if (commitId == null) {
+            Optional<CommitJson> commitJson = commitPersistence.findLatestByProjectAndRef(projectId, refId);
+            if (!commitJson.isPresent()) {
+                throw new InternalErrorException("Could not find latest commit for project and ref");
+            }
+            commitId = commitJson.get().getId();
+        }
 
-        NodeGetInfo info = nodeGetHelper.processGetJson(req.getElements(), commitId, this);
+        NodeGetInfo info = nodePersistence.findAll(projectId, refId, commitId, req.getElements());
 
         ElementsResponse response = new ElementsResponse();
         response.getElements().addAll(info.getActiveElementMap().values());
+        response.getElements().forEach(v -> v.setRefId(refId));
         response.setRejected(new ArrayList<>(info.getRejected().values()));
-        response.setCommitId(info.getCommitId());
+        response.setCommitId(commitId);
         return response;
     }
 
     @Override
     public ElementsCommitResponse createOrUpdate(String projectId, String refId, ElementsRequest req,
-                                                 Map<String, String> params, String user) {
+            Map<String, String> params, String user) {
 
-        ContextHolder.setContext(projectId, refId);
-        boolean overwriteJson = Boolean.parseBoolean(params.get("overwrite"));
-        nodePostHelper.setPreserveTimestamps(Boolean.parseBoolean(params.get("preserveTimestamps")));
-        String commitId = params.get("commitId");
+        boolean overwriteJson = Boolean.parseBoolean(params.get(CrudConstants.OVERWRITE));
+        boolean preserveTimestamps = Boolean.parseBoolean(params.get(CrudConstants.PRESERVETIMESTAMPS));
+        String commitId = params.getOrDefault(CrudConstants.COMMITID, null);
         String lastCommitId = req.getLastCommitId();
 
-        NodeChangeInfo info = nodePostHelper
-            .processPostJson(req.getElements(), overwriteJson,
-                createCommit(user, refId, projectId, req, commitId), this, lastCommitId);
-
-        if (req.getDeletes() != null && !req.getDeletes().isEmpty()) {
-            NodeChangeInfo delete = nodeDeleteHelper.processDeleteJson(req.getDeletes(), createCommit(user, refId, projectId, req, info.getCommitJson().getCommitId()), this);
-            info.getCommitJson().getDeleted().addAll(delete.getCommitJson().getDeleted());
-            info.getDeletedMap().putAll(delete.getDeletedMap());
-            info.getToSaveNodeMap().putAll(delete.getToSaveNodeMap());
-            info.getOldDocIds().addAll(delete.getOldDocIds());
-            info.getRejected().putAll(delete.getRejected());
+        if (lastCommitId != null && !lastCommitId.isEmpty()) {
+            Optional<CommitJson> latestCommit = commitPersistence.findLatestByProjectAndRef(projectId, refId);
+            if (latestCommit.isEmpty() || !lastCommitId.equals(latestCommit.get().getId())) {
+                throw new ConflictException("Given commitId " + lastCommitId + " is not the latest");
+            }
         }
 
-        commitChanges(info);
+        NodeChangeInfo changes = nodePersistence.prepareChange(createCommit(user, refId, projectId, commitId, req),
+            overwriteJson, preserveTimestamps);
+        changes = nodePersistence.prepareAddsUpdates(changes, req.getElements());
+
+        for (ElementJson element : changes.getUpdatedMap().values()) {
+            extraProcessPostedElement(changes, element);
+        }
+        if (req.getDeletes() != null) {
+            changes = nodePersistence.prepareDeletes(changes, req.getDeletes());
+        }
+
+        changes = nodePersistence.commitChanges(changes);
+        CommitJson commitJson = changes.getCommitJson();
+        eventPublisher.forEach(pub -> pub.publish(
+            EventObject.create(commitJson.getProjectId(), commitJson.getRefId(), CrudConstants.COMMIT_SC, commitJson)));
 
         ElementsCommitResponse response = new ElementsCommitResponse();
-        response.getElements().addAll(info.getUpdatedMap().values());
-        response.setRejected(new ArrayList<>(info.getRejected().values()));
-        response.setDeleted(new ArrayList<>(info.getDeletedMap().values()));
-        if(!info.getUpdatedMap().isEmpty() || !info.getDeletedMap().isEmpty()) {
-            response.setCommitId(info.getCommitJson().getId());
+        response.getElements().addAll(changes.getUpdatedMap().values());
+        response.setDeleted(new ArrayList<>(changes.getDeletedMap().values()));
+        response.setRejected(new ArrayList<>(changes.getRejected().values()));
+        if(!changes.getUpdatedMap().isEmpty() || !changes.getDeletedMap().isEmpty()) {
+            response.setCommitId(changes.getCommitJson().getId());
         }
         return response;
     }
 
-    public void commitChanges(NodeChangeInfo info) {
-        Map<String, Node> nodes = info.getToSaveNodeMap();
-        Map<String, ElementJson> json = info.getUpdatedMap();
-        CommitJson cmjs = info.getCommitJson();
-        Instant now = info.getNow();
-        if (!nodes.isEmpty()) {
-            try {
-                if (json != null && !json.isEmpty()) {
-                    this.nodeIndex.indexAll(json.values());
-                }
-                try { this.nodeIndex.removeFromRef(info.getOldDocIds()); } catch(Exception e) {}
-                this.commitIndex.index(cmjs);
 
-                Optional<Commit> existing = this.commitRepository.findByCommitId(cmjs.getId());
-                existing.ifPresentOrElse(
-                    current -> {
-                        this.logger.debug(String.format("Commit object %s already exists. Skipping record creation.", current.getCommitId()));
-                    },
-                    () -> {
-                        Commit commit = new Commit();
-                        commit.setCommitId(cmjs.getId());
-                        commit.setBranchId(cmjs.getRefId());
-                        commit.setCommitType(CommitType.COMMIT);
-                        commit.setCreator(cmjs.getCreator());
-                        commit.setTimestamp(now);
-                        commit.setComment(cmjs.getComment());
-                        this.commitRepository.save(commit);
-                    });
-                this.nodeRepository.saveAll(new ArrayList<>(nodes.values()));
-            } catch (Exception e) {
-                logger.error("Error in commitChanges: ", e);
-                throw new InternalErrorException("Error committing changes: " + e.getMessage());
-            }
-            eventPublisher.forEach((pub) -> pub.publish(
-                EventObject.create(cmjs.getProjectId(), cmjs.getRefId(), "commit", cmjs)));
+    //Info is used in one of the child classes
+    public void extraProcessPostedElement(NodeChangeInfo info, ElementJson element) {
+        if (element.getType() == null || element.getType().isEmpty()) {
+            element.setType(CrudConstants.NODE);
         }
-    }
-
-    @Override
-    public void extraProcessPostedElement(ElementJson element, Node node, NodeChangeInfo info) {
-    }
-
-    @Override
-    public void extraProcessDeletedElement(ElementJson element, Node node, NodeChangeInfo info) {
-    }
-
-    @Override
-    public void extraProcessGotElement(ElementJson element, Node node, NodeGetInfo info) {
     }
 
     @Override
     public ElementsCommitResponse delete(String projectId, String refId, String id, String user) {
         ElementsRequest req = buildRequest(id);
         return delete(projectId, refId, req, user);
+    }
+
+    @Override
+    public ElementsCommitResponse delete(String projectId, String refId, ElementsRequest req, String user) {
+        NodeChangeInfo changes = nodePersistence.prepareChange(createCommit(user, refId, projectId, null, req),
+            false, false);
+        changes = nodePersistence.prepareDeletes(changes, req.getElements());
+
+
+        changes = nodePersistence.commitChanges(changes);
+        ElementsCommitResponse response = new ElementsCommitResponse();
+        response.getElements().addAll(changes.getDeletedMap().values());
+        response.setRejected(new ArrayList<>(changes.getRejected().values()));
+        if(!changes.getDeletedMap().isEmpty()) {
+            response.setCommitId(changes.getCommitJson().getId());
+        }
+        return response;
     }
 
     protected ElementsRequest buildRequest(String id) {
@@ -300,52 +232,21 @@ public class DefaultNodeService implements NodeService {
         return req;
     }
 
-    @Override
-    public ElementsCommitResponse delete(String projectId, String refId, ElementsRequest req, String user) {
-        ContextHolder.setContext(projectId, refId);
-
-        NodeChangeInfo info = nodeDeleteHelper
-            .processDeleteJson(req.getElements(), createCommit(user, refId, projectId, req, null),
-                this);
-        ElementsCommitResponse response = new ElementsCommitResponse();
-
-        commitChanges(info);
-
-        response.getElements().addAll(info.getDeletedMap().values());
-        response.setRejected(new ArrayList<>(info.getRejected().values()));
-        if(!info.getDeletedMap().isEmpty()) {
-            response.setCommitId(info.getCommitJson().getId());
-        }
-        return response;
+    protected ElementsRequest buildRequestFromJsons(Collection<ElementJson> jsons) {
+        return buildRequest(jsons.stream().map(BaseJson::getId).collect(Collectors.toList()));
     }
 
-    private CommitJson createCommit(String creator, String refId, String projectId,
-        ElementsRequest req, String commitId) {
+    private CommitJson createCommit(String creator, String refId, String projectId, String commitId, ElementsRequest req) {
         CommitJson cmjs = new CommitJson();
         cmjs.setCreator(creator);
         cmjs.setComment(req.getComment());
         cmjs.setSource(req.getSource());
         cmjs.setRefId(refId);
         cmjs.setProjectId(projectId);
-
-        if (commitId != null && !commitId.isEmpty()) {
+        if (commitId != null) {
             cmjs.setId(commitId);
+            cmjs.setDocId(commitId);
         }
-
         return cmjs;
-    }
-
-    protected static <T> Stream<List<T>> batches(List<T> source, int length) {
-        return IntStream.iterate(0, i -> i < source.size(), i -> i + length)
-            .mapToObj(i -> source.subList(i, Math.min(i + length, source.size())));
-    }
-
-    protected String toJson(ElementJson elementJson) {
-        try {
-            return objectMapper.writeValueAsString(elementJson);
-        } catch (JsonProcessingException e) {
-            logger.error("Error in toJson: ", e);
-        }
-        return "";
     }
 }

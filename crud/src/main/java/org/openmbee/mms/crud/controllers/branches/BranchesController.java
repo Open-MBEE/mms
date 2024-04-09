@@ -1,6 +1,8 @@
 package org.openmbee.mms.crud.controllers.branches;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
+
+import java.util.Optional;
 import java.util.UUID;
 import org.openmbee.mms.core.config.Privileges;
 import org.openmbee.mms.core.exceptions.BadRequestException;
@@ -15,7 +17,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -40,6 +41,8 @@ public class BranchesController extends BaseController {
     public RefsResponse getAllRefs(
         @PathVariable String projectId,
         Authentication auth) {
+
+        getProjectType(projectId);
 
         RefsResponse res = branchService.getBranches(projectId);
         if (!permissionService.isProjectPublic(projectId)) {
@@ -70,9 +73,8 @@ public class BranchesController extends BaseController {
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Transactional
     @PreAuthorize("@mss.hasProjectPrivilege(authentication, #projectId, 'PROJECT_CREATE_BRANCH', false)")
-    public RefsResponse createRefs(
+    public RefsResponse createRefs( //this can also handle update
         @PathVariable String projectId,
         @RequestBody RefsRequest projectsPost,
         Authentication auth) {
@@ -90,15 +92,24 @@ public class BranchesController extends BaseController {
                     response.addRejection(new Rejection(branch, 400, "Branch id is invalid."));
                     continue;
                 }
-
+                Optional<RefJson> existingOptional = branchPersistence.findById(projectId, branch.getId());
+                if (existingOptional.isPresent()) {
+                    //Branch exists, should merge the json, but cannot change parent ref or commit
+                    //if branch exists it will get resurrected if it was deleted
+                    RefJson existing = existingOptional.get();
+                    if (branch.getParentRefId() != null && !branch.getParentRefId().equals(existing.getParentRefId()) ||
+                        branch.getParentCommitId() != null && !branch.getParentCommitId().equals(existing.getParentCommitId())) {
+                        response.addRejection(new Rejection(branch, 400, "Cannot change existing branch's origin"));
+                        continue;
+                    }
+                    branch.merge(existingOptional.get());
+                    RefJson res = branchService.updateBranch(projectId, branch);
+                    response.getRefs().add(res);
+                    continue;
+                }
                 RefJson res;
                 branch.setCreator(auth.getName());
-                if (branch.getParentCommitId() == null || branch.getParentCommitId().isEmpty()) {
-                    res = branchService.createBranch(projectId, branch);
-                } else {
-                    res = branchService.createBranchfromCommit(projectId, branch, getNodeService(projectId));
-                }
-
+                res = branchService.createBranch(projectId, branch);
                 permissionService.initBranchPerms(projectId, branch.getId(), true, auth.getName());
                 response.getRefs().add(res);
             } catch (MMSException e) {
@@ -112,7 +123,6 @@ public class BranchesController extends BaseController {
     }
 
     @DeleteMapping("/{refId}")
-    @Transactional
     @PreAuthorize("@mss.hasBranchPrivilege(authentication, #projectId, #refId, 'BRANCH_DELETE', false)")
     public RefsResponse deleteRef(
         @PathVariable String projectId,

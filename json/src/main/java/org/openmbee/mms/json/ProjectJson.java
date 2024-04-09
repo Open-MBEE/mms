@@ -10,6 +10,7 @@ public class ProjectJson extends BaseJson<ProjectJson> {
 
     public static final String ORGID = "orgId";
     public static final String PROJECTTYPE = "schema";
+    public static final String DELETED = "deleted";
 
     @Override
     public String getProjectId() {

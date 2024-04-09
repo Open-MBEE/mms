@@ -8,7 +8,6 @@ import org.openmbee.mms.core.services.PermissionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,7 +26,6 @@ public class PermissionsController {
     }
 
     @PostMapping(value = "/orgs/{orgId}/permissions", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Transactional
     @PreAuthorize("@mss.hasOrgPrivilege(authentication, #orgId, 'ORG_UPDATE_PERMISSIONS', false)")
     public PermissionUpdatesResponse updateOrgPermissions(
         @PathVariable String orgId,
@@ -48,7 +46,6 @@ public class PermissionsController {
     }
 
     @PostMapping(value = "/projects/{projectId}/permissions", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Transactional
     @PreAuthorize("@mss.hasProjectPrivilege(authentication, #projectId, 'PROJECT_UPDATE_PERMISSIONS', false)")
     public PermissionUpdatesResponse updateProjectPermissions(
         @PathVariable String projectId,
@@ -72,7 +69,6 @@ public class PermissionsController {
     }
 
     @PostMapping(value = "/projects/{projectId}/refs/{refId}/permissions", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Transactional
     @PreAuthorize("@mss.hasBranchPrivilege(authentication, #projectId, #refId, 'BRANCH_UPDATE_PERMISSIONS', false)")
     public PermissionUpdatesResponse updateBranchPermissions(
         @PathVariable String projectId,

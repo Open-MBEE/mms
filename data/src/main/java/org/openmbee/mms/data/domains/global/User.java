@@ -2,11 +2,8 @@ package org.openmbee.mms.data.domains.global;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Collection;
 import javax.persistence.*;
-
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 @Entity
@@ -20,7 +17,6 @@ public class User extends Base {
     private String lastName;
     private boolean admin;
 
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
     private boolean enabled;
@@ -75,22 +71,6 @@ public class User extends Base {
 
     public void setPassword(String password) {
         this.password = password;
-    }
-
-    public void encodePassword(String password) {
-        BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder();
-        this.password = bcrypt.encode(password);
-    }
-
-    public void updatePassword(String old, String newPass1, String newPass2) {
-        BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder();
-        if (!password.equals(bcrypt.encode(old))) {
-            throw new IllegalArgumentException("Existing Password invalid");
-        }
-        if (!newPass1.equals(newPass2)) {
-            throw new IllegalArgumentException("New Passwords don't match");
-        }
-        this.password = bcrypt.encode(newPass1);
     }
 
     public String getFirstName() {

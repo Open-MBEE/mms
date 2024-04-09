@@ -1,5 +1,5 @@
 dependencies {
-    implementation project(':rdb')
+    implementation project (":core")
+    implementation project (":data")
     implementation 'org.apache.commons:commons-lang3:3.10'
-    implementation commonDependencies.'spring-boot'
 }

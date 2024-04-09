@@ -1,0 +1,18 @@
+apply plugin: 'java-library'
+apply plugin: 'io.spring.dependency-management'
+
+Map<String, String> commonDependencies = rootProject.ext.commonDependencies
+
+dependencies {
+    implementation project(':core')
+    implementation project(':crud')
+
+    implementation 'com.google.code.gson:gson:2.8.2'
+    implementation 'javax.servlet:javax.servlet-api:4.0.1'
+    implementation 'org.apache.httpcomponents:httpclient:4.5.3'
+    
+    implementation commonDependencies.'spring-security-config'
+    implementation commonDependencies.'spring-security-web'
+
+    testImplementation commonDependencies.'spring-boot-starter-test'
+}

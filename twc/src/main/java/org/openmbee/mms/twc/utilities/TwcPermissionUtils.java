@@ -1,9 +1,7 @@
 package org.openmbee.mms.twc.utilities;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.openmbee.mms.twc.TeamworkCloud;
 import org.openmbee.mms.twc.TeamworkCloudEndpoints;
 import org.openmbee.mms.twc.constants.TwcConstants;
@@ -13,10 +11,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-
 import org.springframework.web.client.RestTemplate;
-import org.json.JSONArray;
-import org.json.JSONObject;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Component
 public class TwcPermissionUtils {
@@ -69,7 +68,7 @@ public class TwcPermissionUtils {
 
 		for (int inx = 0; inx < twcRoles.size(); inx++) {
 			roleId = projectRoleIdMap.get(twcRoles.get(inx));
-			users = getUsersList(workspaceId, twc, resourceId, roleId);
+			users = getUsersList(twc, resourceId, roleId);
 			if (users != null && users.contains(user))
 				return true;
 		}
@@ -86,13 +85,13 @@ public class TwcPermissionUtils {
 	 * @param roleId
 	 * @return
 	 */
-	public List<String> getUsersList(String workspaceId, TeamworkCloud twc, String resourceId, String roleId) {
+	public List<String> getUsersList(TeamworkCloud twc, String resourceId, String roleId) {
 
 		// TODO:: add distributed caching for performance
 
 		List<String> users = null;
 		ResponseEntity<String> respEntity = getRestResponse(
-				TeamworkCloudEndpoints.GETPROJECTUSERS.buildUrl(twc, workspaceId, resourceId, roleId), twc);
+				TeamworkCloudEndpoints.GETPROJECTUSERS.buildUrl(twc, resourceId, roleId), twc);
 
 		if (respEntity == null || respEntity.getBody() == null)
 			return null;
@@ -123,11 +122,12 @@ public class TwcPermissionUtils {
 			return null;
 
 		JSONArray rolesJsonArray = jsonUtils.parseStringToJsonArray(respEntity.getBody());
-
-		for (int idx = 0; idx < rolesJsonArray.length(); idx++) {
-			JSONObject roleJsonObj = rolesJsonArray.getJSONObject(idx);
-			roleNameIDMap.put(roleJsonObj.getString(TwcConstants.NAME_JSONOBJECT),
-					roleJsonObj.getString(TwcConstants.ID_JSONOBJECT));
+		if (rolesJsonArray != null) {
+			for (int idx = 0; idx < rolesJsonArray.length(); idx++) {
+				JSONObject roleJsonObj = rolesJsonArray.getJSONObject(idx);
+				roleNameIDMap.put(roleJsonObj.getString(TwcConstants.NAME_JSONOBJECT),
+						roleJsonObj.getString(TwcConstants.ID_JSONOBJECT));
+			}
 		}
 
 		return roleNameIDMap;

@@ -3,8 +3,9 @@ package org.openmbee.mms.rdb.repositories;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
-import org.openmbee.mms.core.dao.ProjectDAO;
+
 import org.openmbee.mms.core.exceptions.InternalErrorException;
+import org.openmbee.mms.data.dao.ProjectDAO;
 import org.openmbee.mms.data.domains.global.Project;
 import org.openmbee.mms.rdb.config.DatabaseDefinitionService;
 import org.slf4j.Logger;
@@ -60,13 +61,18 @@ public class ProjectDAOImpl implements ProjectDAO {
     }
 
     @Override
-    public void delete(Project p) {
-        projectRepository.delete(p);
+    public void delete(String projectId) {
+        try {
+            projectRepository.findByProjectId(projectId).ifPresent(v -> projectRepository.delete(v));
+        } catch (Exception ex) {
+            logger.error("Could not delete project from project Repository", ex);
+            throw new InternalErrorException(ex);
+        }
 
         try {
-            projectOperations.deleteProjectDatabase(p);
-        } catch(SQLException ex) {
-            logger.error("DELETE PROJECT DATABASE EXCEPTION\nPotential connection issue, query statement mishap, or unexpected RDB behavior.");
+            projectOperations.deleteProjectDatabase(projectId);
+        } catch (SQLException ex) {
+            logger.error("DELETE PROJECT DATABASE EXCEPTION\nPotential connection issue, query statement mishap, or unexpected RDB behavior.", ex);
             throw new InternalErrorException(ex);
         }
     }

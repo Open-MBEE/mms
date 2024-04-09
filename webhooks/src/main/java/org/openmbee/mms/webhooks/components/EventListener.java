@@ -1,8 +1,8 @@
 package org.openmbee.mms.webhooks.components;
 
-import org.openmbee.mms.core.dao.WebhookDAO;
-import org.openmbee.mms.data.domains.global.Webhook;
 import org.openmbee.mms.core.objects.EventObject;
+import org.openmbee.mms.webhooks.json.WebhookJson;
+import org.openmbee.mms.webhooks.persistence.WebhookPersistence;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,18 +27,18 @@ public class EventListener implements ApplicationListener<EventObject> {
     @Value("${webhook.default.all:#{null}}")
     private Optional<String> allEvents;
 
-    private WebhookDAO eventRepository;
+    private WebhookPersistence eventRepository;
 
     @Autowired
-    public void setEventRepository(WebhookDAO eventRepository) {
+    public void setEventRepository(WebhookPersistence eventRepository) {
         this.eventRepository = eventRepository;
     }
 
     @Override
     public void onApplicationEvent(EventObject eventObject) {
-        List<Webhook> webhooks = eventRepository.findAllByProject_ProjectId(eventObject.getProjectId());
+        List<WebhookJson> webhooks = eventRepository.findAllByProjectId(eventObject.getProjectId());
 
-        for (Webhook webhook : webhooks) {
+        for (WebhookJson webhook : webhooks) {
             sendWebhook(webhook.getUrl(), eventObject.getSource());
         }
 

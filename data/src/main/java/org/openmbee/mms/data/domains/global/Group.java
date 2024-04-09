@@ -10,6 +10,7 @@ import javax.persistence.Table;
 @Table(name = "groups")
 public class Group extends Base {
 
+    public static final String NAME_COLUMN = "name";
 
     @Column(unique = true)
     private String name;

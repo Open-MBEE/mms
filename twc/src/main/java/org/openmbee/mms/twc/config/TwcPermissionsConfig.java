@@ -10,7 +10,7 @@ import org.springframework.core.annotation.Order;
 public class TwcPermissionsConfig {
 
     @Bean
-    @Order(-1)
+    @Order(-2)
     public PermissionsDelegateFactory getPermissionsDelegateFactory() {
         return new TwcPermissionsDelegateFactory();
     }

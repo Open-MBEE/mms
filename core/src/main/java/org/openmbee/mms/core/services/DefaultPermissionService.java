@@ -1,27 +1,26 @@
 package org.openmbee.mms.core.services;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 import org.openmbee.mms.core.builders.PermissionUpdatesResponseBuilder;
 import org.openmbee.mms.core.config.AuthorizationConstants;
 import org.openmbee.mms.core.config.Constants;
-import org.openmbee.mms.core.dao.BranchGDAO;
-import org.openmbee.mms.core.dao.OrgDAO;
-import org.openmbee.mms.core.dao.ProjectDAO;
+import org.openmbee.mms.core.dao.BranchPersistence;
+import org.openmbee.mms.core.dao.OrgPersistence;
+import org.openmbee.mms.core.dao.ProjectPersistence;
 import org.openmbee.mms.core.delegation.PermissionsDelegate;
-import org.openmbee.mms.core.delegation.PermissionsDelegateFactory;
 import org.openmbee.mms.core.exceptions.InternalErrorException;
 import org.openmbee.mms.core.exceptions.NotFoundException;
 import org.openmbee.mms.core.objects.PermissionResponse;
 import org.openmbee.mms.core.objects.PermissionUpdateRequest;
 import org.openmbee.mms.core.objects.PermissionUpdateResponse;
 import org.openmbee.mms.core.objects.PermissionUpdatesResponse;
-import org.openmbee.mms.data.domains.global.Branch;
-import org.openmbee.mms.data.domains.global.Organization;
-import org.openmbee.mms.data.domains.global.Project;
+import org.openmbee.mms.core.utils.PermissionsDelegateUtil;
+import org.openmbee.mms.json.OrgJson;
+import org.openmbee.mms.json.ProjectJson;
+import org.openmbee.mms.json.RefJson;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,44 +28,44 @@ import org.springframework.transaction.annotation.Transactional;
 @Service("defaultPermissionService")
 public class DefaultPermissionService implements PermissionService {
 
-    private BranchGDAO branchRepo;
-    private ProjectDAO projectRepo;
-    private OrgDAO orgRepo;
-    private List<PermissionsDelegateFactory> permissionsDelegateFactories;
+    private static final Logger logger = LoggerFactory.getLogger(DefaultPermissionService.class);
+
+    private BranchPersistence branchPersistence;
+    private ProjectPersistence projectPersistence;
+    private OrgPersistence orgPersistence;
+    private PermissionsDelegateUtil permissionsDelegateUtil;
 
     @Autowired
-    public void setPermissionsDelegateFactories(List<PermissionsDelegateFactory> permissionsDelegateFactories) {
-        this.permissionsDelegateFactories = permissionsDelegateFactories;
+    public void setPermissionsDelegateUtil(PermissionsDelegateUtil permissionsDelegateUtil) {
+        this.permissionsDelegateUtil = permissionsDelegateUtil;
     }
 
     @Autowired
-    public void setBranchRepo(BranchGDAO branchRepo) {
-        this.branchRepo = branchRepo;
+    public void setBranchPersistence(BranchPersistence branchPersistence) {
+        this.branchPersistence = branchPersistence;
     }
 
     @Autowired
-    public void setProjectRepo(ProjectDAO projectRepo) {
-        this.projectRepo = projectRepo;
+    public void setProjectPersistence(ProjectPersistence projectPersistence) {
+        this.projectPersistence = projectPersistence;
     }
 
     @Autowired
-    public void setOrgRepo(OrgDAO orgRepo) {
-        this.orgRepo = orgRepo;
+    public void setOrgPersistence(OrgPersistence orgPersistence) {
+        this.orgPersistence = orgPersistence;
     }
 
     @Override
-    @Transactional
     public void initOrgPerms(String orgId, String creator) {
-        Organization organization = getOrganization(orgId);
-        PermissionsDelegate permissionsDelegate = getPermissionsDelegate(organization);
+        OrgJson organization = getOrganization(orgId);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(organization);
         permissionsDelegate.initializePermissions(creator);
     }
 
     @Override
-    @Transactional
     public void initProjectPerms(String projectId, boolean inherit, String creator) {
-        Project project = getProject(projectId);
-        PermissionsDelegate permissionsDelegate = getPermissionsDelegate(project);
+        ProjectJson project = getProject(projectId);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(project);
         permissionsDelegate.initializePermissions(creator, inherit);
 
         recalculateInheritedPerms(project);
@@ -74,54 +73,58 @@ public class DefaultPermissionService implements PermissionService {
     }
 
     @Override
-    @Transactional
     public void initBranchPerms(String projectId, String branchId, boolean inherit, String creator) {
-        Branch branch = getBranch(projectId, branchId, BRANCH_NOTFOUND_BEHAVIOR.CREATE);
-        PermissionsDelegate permissionsDelegate = getPermissionsDelegate(branch);
+        RefJson branch = getBranch(projectId, branchId, BRANCH_NOTFOUND_BEHAVIOR.THROW);
+        if(branch == null) {
+            logger.error("Error initiating branch permissions " + projectId + " / " + branchId);
+            throw new InternalErrorException("Could not initiate branch permissions");
+        }
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(branch);
         permissionsDelegate.initializePermissions(creator, inherit);
 
         recalculateInheritedPerms(branch);
     }
 
     @Override
-    @Transactional
     public PermissionUpdatesResponse updateOrgUserPerms(PermissionUpdateRequest req, String orgId) {
-        Organization organization = getOrganization(orgId);
-        PermissionsDelegate permissionsDelegate = getPermissionsDelegate(organization);
+        OrgJson organization = getOrganization(orgId);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(organization);
         PermissionUpdatesResponseBuilder responseBuilder = new PermissionUpdatesResponseBuilder();
         responseBuilder.getUsers().insert(permissionsDelegate.updateUserPermissions(req));
 
-        for (Project proj: organization.getProjects()) {
-            responseBuilder.insert(recalculateInheritedPerms(proj));
+        Collection<ProjectJson> projects = projectPersistence.findAllByOrgId(orgId);
+
+        for (ProjectJson project : projects) {
+            responseBuilder.insert(recalculateInheritedPerms(project));
         }
 
         return responseBuilder.getPermissionUpdatesReponse();
     }
 
     @Override
-    @Transactional
     public PermissionUpdatesResponse updateOrgGroupPerms(PermissionUpdateRequest req, String orgId) {
-        Organization organization = getOrganization(orgId);
-        PermissionsDelegate permissionsDelegate = getPermissionsDelegate(organization);
+        OrgJson organization = getOrganization(orgId);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(organization);
         PermissionUpdatesResponseBuilder responseBuilder = new PermissionUpdatesResponseBuilder();
         responseBuilder.getGroups().insert(permissionsDelegate.updateGroupPermissions(req));
 
-        for (Project proj : organization.getProjects()) {
-            responseBuilder.insert(recalculateInheritedPerms(proj));
+        Collection<ProjectJson> projects = projectPersistence.findAllByOrgId(orgId);
+        for (ProjectJson project : projects) {
+            responseBuilder.insert(recalculateInheritedPerms(project));
         }
 
         return responseBuilder.getPermissionUpdatesReponse();
     }
 
     @Override
-    @Transactional
     public PermissionUpdatesResponse updateProjectUserPerms(PermissionUpdateRequest req, String projectId) {
-        Project project = getProject(projectId);
-        PermissionsDelegate permissionsDelegate = getPermissionsDelegate(project);
+        ProjectJson project = getProject(projectId);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(project);
         PermissionUpdatesResponseBuilder responseBuilder = new PermissionUpdatesResponseBuilder();
         responseBuilder.getUsers().insert(permissionsDelegate.updateUserPermissions(req));
 
-        for (Branch b : project.getBranches()) {
+        Collection<RefJson> branches = branchPersistence.findAll(projectId);
+        for (RefJson b : branches) {
             responseBuilder.insert(recalculateInheritedPerms(b));
         }
 
@@ -129,14 +132,14 @@ public class DefaultPermissionService implements PermissionService {
     }
 
     @Override
-    @Transactional
     public PermissionUpdatesResponse updateProjectGroupPerms(PermissionUpdateRequest req, String projectId) {
-        Project project = getProject(projectId);
-        PermissionsDelegate permissionsDelegate = getPermissionsDelegate(project);
+        ProjectJson project = getProject(projectId);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(project);
         PermissionUpdatesResponseBuilder responseBuilder = new PermissionUpdatesResponseBuilder();
         responseBuilder.getGroups().insert(permissionsDelegate.updateGroupPermissions(req));
 
-        for (Branch b : project.getBranches()) {
+        Collection<RefJson> branches = branchPersistence.findAll(projectId);
+        for (RefJson b : branches) {
             responseBuilder.insert(recalculateInheritedPerms(b));
         }
 
@@ -144,28 +147,28 @@ public class DefaultPermissionService implements PermissionService {
     }
 
     @Override
-    @Transactional
     public PermissionUpdateResponse updateBranchUserPerms(PermissionUpdateRequest req, String projectId, String branchId) {
-        Branch branch = getBranch(projectId, branchId, BRANCH_NOTFOUND_BEHAVIOR.THROW);
-        PermissionsDelegate permissionsDelegate = getPermissionsDelegate(branch);
+        RefJson branch = getBranch(projectId, branchId, BRANCH_NOTFOUND_BEHAVIOR.THROW);
+        if(branch == null) {
+            throw new NotFoundException("Branch not found");
+        }
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(branch);
         return permissionsDelegate.updateUserPermissions(req);
     }
 
     @Override
-    @Transactional
     public PermissionUpdateResponse updateBranchGroupPerms(PermissionUpdateRequest req, String projectId, String branchId) {
-        Branch branch = getBranch(projectId, branchId, BRANCH_NOTFOUND_BEHAVIOR.THROW);
-        PermissionsDelegate permissionsDelegate = getPermissionsDelegate(branch);
+        RefJson branch = getBranch(projectId, branchId, BRANCH_NOTFOUND_BEHAVIOR.THROW);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(branch);
         return permissionsDelegate.updateGroupPermissions(req);
     }
 
     @Override
-    @Transactional
     public PermissionUpdatesResponse setProjectInherit(boolean isInherit, String projectId) {
         PermissionUpdatesResponseBuilder responseBuilder = new PermissionUpdatesResponseBuilder();
-        responseBuilder.setInherit(true);
-        Project project = getProject(projectId);
-        PermissionsDelegate permissionsDelegate = getPermissionsDelegate(project);
+        responseBuilder.setInherit(isInherit);
+        ProjectJson project = getProject(projectId);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(project);
         if (permissionsDelegate.setInherit(isInherit)) {
             responseBuilder.insert(recalculateInheritedPerms(project));
         }
@@ -173,12 +176,11 @@ public class DefaultPermissionService implements PermissionService {
     }
 
     @Override
-    @Transactional
     public PermissionUpdatesResponse setBranchInherit(boolean isInherit, String projectId, String branchId) {
         PermissionUpdatesResponseBuilder responseBuilder = new PermissionUpdatesResponseBuilder();
-        responseBuilder.setInherit(true);
-        Branch branch = getBranch(projectId, branchId, BRANCH_NOTFOUND_BEHAVIOR.THROW);
-        PermissionsDelegate permissionsDelegate = getPermissionsDelegate(branch);
+        responseBuilder.setInherit(isInherit);
+        RefJson branch = getBranch(projectId, branchId, BRANCH_NOTFOUND_BEHAVIOR.THROW);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(branch);
         if (permissionsDelegate.setInherit(isInherit)) {
             responseBuilder.insert(recalculateInheritedPerms(branch));
         }
@@ -186,169 +188,141 @@ public class DefaultPermissionService implements PermissionService {
     }
 
     @Override
-    @Transactional
     public boolean setOrgPublic(boolean isPublic, String orgId) {
-        Organization organization = getOrganization(orgId);
-        PermissionsDelegate permissionsDelegate = getPermissionsDelegate(organization);
+        OrgJson organization = getOrganization(orgId);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(organization);
         permissionsDelegate.setPublic(isPublic);
         return true;
     }
 
     @Override
-    @Transactional
     public boolean setProjectPublic(boolean isPublic, String projectId) {
-        Project project = getProject(projectId);
-        PermissionsDelegate permissionsDelegate = getPermissionsDelegate(project);
+        ProjectJson project = getProject(projectId);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(project);
         permissionsDelegate.setPublic(isPublic);
         return true;
     }
 
     @Override
-    @Transactional
     public boolean hasOrgPrivilege(String privilege, String user, Set<String> groups, String orgId) {
         if (groups.contains(AuthorizationConstants.MMSADMIN)) return true;
 
-        Organization organization = getOrganization(orgId);
-        PermissionsDelegate permissionsDelegate = getPermissionsDelegate(organization);
+        OrgJson organization = getOrganization(orgId);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(organization);
         return permissionsDelegate.hasPermission(user, groups, privilege);
     }
 
     @Override
-    @Transactional
     public boolean hasProjectPrivilege(String privilege, String user, Set<String> groups, String projectId) {
         if (groups.contains(AuthorizationConstants.MMSADMIN)) return true;
 
-        Project project = getProject(projectId);
-        PermissionsDelegate permissionsDelegate = getPermissionsDelegate(project);
+        ProjectJson project = getProject(projectId);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(project);
         return permissionsDelegate.hasPermission(user, groups, privilege);
     }
 
     @Override
-    @Transactional
     public boolean hasBranchPrivilege(String privilege, String user, Set<String> groups, String projectId, String branchId) {
         if (groups.contains(AuthorizationConstants.MMSADMIN)) return true;
 
-        Branch branch = getBranch(projectId, branchId, BRANCH_NOTFOUND_BEHAVIOR.THROW);
-        PermissionsDelegate permissionsDelegate = getPermissionsDelegate(branch);
+        RefJson branch = getBranch(projectId, branchId, BRANCH_NOTFOUND_BEHAVIOR.THROW);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(branch);
         return permissionsDelegate.hasPermission(user, groups, privilege);
     }
 
     @Override
-    @Transactional
     public boolean isProjectInherit(String projectId) {
-        Optional<Project> project = projectRepo.findByProjectId(projectId);
-        if (!project.isPresent()) {
-            throw new NotFoundException("project " + projectId + " not found");
-        }
-        return project.get().isInherit();
+        return projectPersistence.inheritsPermissions(projectId);
     }
 
     @Override
-    @Transactional
     public boolean isBranchInherit(String projectId, String branchId) {
-        Optional<Branch> branch = branchRepo.findByProject_ProjectIdAndBranchId(projectId, branchId);
-        return branch.map(Branch::isInherit).orElse(false);
+        return branchPersistence.inheritsPermissions(projectId, branchId);
     }
 
     @Override
-    @Transactional
     public boolean isOrgPublic(String orgId) {
-        Optional<Organization> organization = orgRepo.findByOrganizationId(orgId);
-        if (!organization.isPresent()) {
-            throw new NotFoundException("org " + orgId + " not found");
-        }
-        return organization.get().isPublic();
+        return orgPersistence.hasPublicPermissions(orgId);
     }
 
     @Override
-    @Transactional
     public boolean isProjectPublic(String projectId) {
-        Optional<Project> project = projectRepo.findByProjectId(projectId);
-        if (!project.isPresent()) {
-            throw new NotFoundException("project " + projectId + " not found");
-        }
-        return project.get().isPublic();
+        return projectPersistence.hasPublicPermissions(projectId);
     }
 
     @Override
-    @Transactional
     public PermissionResponse getOrgGroupRoles(String orgId) {
-        Organization organization = getOrganization(orgId);
-        PermissionsDelegate permissionsDelegate = getPermissionsDelegate(organization);
+        OrgJson organization = getOrganization(orgId);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(organization);
         return permissionsDelegate.getGroupRoles();
     }
 
     @Override
-    @Transactional
     public PermissionResponse getOrgUserRoles(String orgId) {
-        Organization organization = getOrganization(orgId);
-        PermissionsDelegate permissionsDelegate = getPermissionsDelegate(organization);
+        OrgJson organization = getOrganization(orgId);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(organization);
         return permissionsDelegate.getUserRoles();
     }
 
     @Override
-    @Transactional
     public PermissionResponse getProjectGroupRoles(String projectId) {
-        Project project = getProject(projectId);
-        PermissionsDelegate permissionsDelegate = getPermissionsDelegate(project);
+        ProjectJson project = getProject(projectId);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(project);
         return permissionsDelegate.getGroupRoles();
     }
 
     @Override
-    @Transactional
     public PermissionResponse getProjectUserRoles(String projectId) {
-        Project project = getProject(projectId);
-        PermissionsDelegate permissionsDelegate = getPermissionsDelegate(project);
+        ProjectJson project = getProject(projectId);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(project);
         return permissionsDelegate.getUserRoles();
     }
 
     @Override
-    @Transactional
     public PermissionResponse getBranchGroupRoles(String projectId, String branchId) {
-        Branch branch = getBranch(projectId, branchId, BRANCH_NOTFOUND_BEHAVIOR.IGNORE);
+        RefJson branch = getBranch(projectId, branchId, BRANCH_NOTFOUND_BEHAVIOR.IGNORE);
 
         if (branch == null) {
             return PermissionResponse.getDefaultResponse();
         }
 
-        PermissionsDelegate permissionsDelegate = getPermissionsDelegate(branch);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(branch);
         return permissionsDelegate.getGroupRoles();
     }
 
     @Override
-    @Transactional
     public PermissionResponse getBranchUserRoles(String projectId, String branchId) {
-        Branch branch = getBranch(projectId, branchId, BRANCH_NOTFOUND_BEHAVIOR.IGNORE);
+        RefJson branch = getBranch(projectId, branchId, BRANCH_NOTFOUND_BEHAVIOR.IGNORE);
 
         if (branch == null) {
             return PermissionResponse.getDefaultResponse();
         }
 
-        PermissionsDelegate permissionsDelegate = getPermissionsDelegate(branch);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(branch);
         return permissionsDelegate.getUserRoles();
     }
 
-    private PermissionUpdatesResponse recalculateInheritedPerms(Project project) {
+    private PermissionUpdatesResponse recalculateInheritedPerms(ProjectJson project) {
 
-        PermissionsDelegate permissionsDelegate = getPermissionsDelegate(project);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(project);
         PermissionUpdatesResponseBuilder responseBuilder = new PermissionUpdatesResponseBuilder();
         responseBuilder.insert(permissionsDelegate.recalculateInheritedPerms());
 
-        if (project.getBranches() !=  null) {
-            for (Branch branch : project.getBranches()) {
-                responseBuilder.insert(recalculateInheritedPerms(branch));
-            }
+        Collection<RefJson> branches = branchPersistence.findAll(project.getProjectId());
+        for (RefJson branch : branches) {
+            responseBuilder.insert(recalculateInheritedPerms(branch));
         }
+
         return responseBuilder.getPermissionUpdatesReponse();
     }
 
-    private PermissionUpdatesResponse recalculateInheritedPerms(Branch branch) {
-        PermissionsDelegate permissionsDelegate = getPermissionsDelegate(branch);
+    private PermissionUpdatesResponse recalculateInheritedPerms(RefJson branch) {
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(branch);
         return permissionsDelegate.recalculateInheritedPerms();
     }
 
-    private Organization getOrganization(String orgId) {
-        Optional<Organization> org = orgRepo.findByOrganizationId(orgId);
+    private OrgJson getOrganization(String orgId) {
+        Optional<OrgJson> org = orgPersistence.findById(orgId);
 
         if (!org.isPresent()) {
             throw new NotFoundException("Organization " + orgId + " not found");
@@ -357,10 +331,10 @@ public class DefaultPermissionService implements PermissionService {
         return org.get();
     }
 
-    private Project getProject(String projectId) {
-        Optional<Project> proj = projectRepo.findByProjectId(projectId);
+    private ProjectJson getProject(String projectId) {
+        Optional<ProjectJson> proj = projectPersistence.findById(projectId);
 
-        if (!proj.isPresent()) {
+        if (proj.isEmpty()) {
             throw new NotFoundException("Project " + projectId + " not found");
         }
         return proj.get();
@@ -368,61 +342,24 @@ public class DefaultPermissionService implements PermissionService {
 
     private enum BRANCH_NOTFOUND_BEHAVIOR {THROW, CREATE, IGNORE}
 
-    private Branch getBranch(String projectId, String branchId, BRANCH_NOTFOUND_BEHAVIOR mode) {
-        Optional<Branch> branch = branchRepo.findByProject_ProjectIdAndBranchId(projectId, branchId);
-        if(!branch.isPresent()) {
-            switch(mode){
+    private RefJson getBranch(String projectId, String branchId, BRANCH_NOTFOUND_BEHAVIOR mode) {
+        Optional<RefJson> branch = branchPersistence.findById(projectId, branchId);
+        if (branch.isEmpty()) {
+            switch (mode) {
                 case THROW:
-                    throw new NotFoundException("Branch " +  projectId + " " + branchId + " not found");
+                    throw new NotFoundException("Branch " + projectId + " " + branchId + " not found");
+                /* branch should never be created here
                 case CREATE:
-                    Branch b = new Branch(getProject(projectId), branchId, false);
-                    branchRepo.save(b);
-                    return b;
+                    RefJson b = new RefJson();
+                    b.setProjectId(projectId);
+                    b.setRefId(branchId);
+                    return branchPersistence.save(b);
+                */
                 default:
                     //do nothing
                     break;
             }
         }
         return branch.orElse(null);
-    }
-
-    private PermissionsDelegate getPermissionsDelegate(final Organization organization) {
-        Optional<PermissionsDelegate> permissionsDelegate = permissionsDelegateFactories.stream()
-            .map(v -> v.getPermissionsDelegate(organization)).filter(Objects::nonNull).findFirst();
-
-        if (permissionsDelegate.isPresent()) {
-            return permissionsDelegate.get();
-        }
-
-        throw new InternalErrorException(
-            "No valid permissions scheme found for organization " + organization.getOrganizationId()
-                + " (" + organization.getOrganizationName() + ")");
-    }
-
-    private PermissionsDelegate getPermissionsDelegate(final Project project) {
-        Optional<PermissionsDelegate> permissionsDelegate = permissionsDelegateFactories.stream()
-            .map(v -> v.getPermissionsDelegate(project)).filter(Objects::nonNull).findFirst();
-
-        if(permissionsDelegate.isPresent()) {
-            return permissionsDelegate.get();
-        }
-
-        throw new InternalErrorException(
-            "No valid permissions scheme found for project " + project.getProjectId()
-                + " (" + project.getProjectName() + ")");
-    }
-
-    private PermissionsDelegate getPermissionsDelegate(final Branch branch) {
-        Optional<PermissionsDelegate> permissionsDelegate = permissionsDelegateFactories.stream()
-            .map(v -> v.getPermissionsDelegate(branch)).filter(Objects::nonNull).findFirst();
-
-        if(permissionsDelegate.isPresent()) {
-            return permissionsDelegate.get();
-        }
-
-        throw new InternalErrorException(
-            "No valid permissions scheme found for branch " + branch.getBranchId()
-                + " of project " + branch.getProject().getProjectId()
-                + " (" + branch.getProject().getProjectName() + ")");
     }
 }

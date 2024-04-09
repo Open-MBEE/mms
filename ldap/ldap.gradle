@@ -3,3 +3,9 @@ dependencies {
 
     implementation commonDependencies.'spring-security-ldap'
 }
+
+tasks {
+    processResources {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    }
+}

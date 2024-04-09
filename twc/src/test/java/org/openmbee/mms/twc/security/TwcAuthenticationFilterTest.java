@@ -23,7 +23,7 @@ public class TwcAuthenticationFilterTest {
 	TwcConfig twcConfig;
 
 	@Mock
-    TwcUserDetailsService userDetailsService;
+	TwcUserDetailsService userDetailsService;
 
 	@Mock
 	TwcAuthenticationProvider twcAuthProvider;

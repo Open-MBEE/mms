@@ -7,8 +7,6 @@ import java.util.Map;
 import org.openmbee.mms.core.objects.ElementsCommitResponse;
 import org.openmbee.mms.core.objects.ElementsRequest;
 import org.openmbee.mms.core.objects.ElementsResponse;
-import org.openmbee.mms.data.domains.scoped.Node;
-import org.openmbee.mms.json.ElementJson;
 
 public interface NodeService {
 
@@ -20,12 +18,6 @@ public interface NodeService {
 
     ElementsCommitResponse createOrUpdate(String projectId, String refId, ElementsRequest req,
                                           Map<String, String> params, String user);
-
-    void extraProcessPostedElement(ElementJson element, Node node, NodeChangeInfo info);
-
-    void extraProcessDeletedElement(ElementJson element, Node node, NodeChangeInfo info);
-
-    void extraProcessGotElement(ElementJson element, Node node, NodeGetInfo info);
 
     ElementsCommitResponse delete(String projectId, String refId, String id, String user);
 

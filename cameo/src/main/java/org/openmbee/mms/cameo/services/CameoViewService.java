@@ -10,44 +10,52 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+
 import org.openmbee.mms.cameo.CameoConstants;
 import org.openmbee.mms.cameo.CameoNodeType;
 import org.openmbee.mms.core.config.ContextHolder;
+import org.openmbee.mms.core.dao.NodePersistence;
 import org.openmbee.mms.core.objects.ElementsRequest;
 import org.openmbee.mms.core.objects.ElementsResponse;
 import org.openmbee.mms.core.services.NodeChangeInfo;
 import org.openmbee.mms.core.services.NodeGetInfo;
-import org.openmbee.mms.data.domains.scoped.Node;
+import org.openmbee.mms.crud.domain.JsonDomain;
 import org.openmbee.mms.json.ElementJson;
+import org.openmbee.mms.view.services.PropertyData;
+import org.openmbee.mms.view.services.ViewService;
 import org.springframework.stereotype.Service;
 
 @Service("cameoViewService")
-public class CameoViewService extends CameoNodeService {
+public class CameoViewService extends CameoNodeService implements ViewService {
 
+    @Override
     public ElementsResponse getDocuments(String projectId, String refId, Map<String, String> params) {
-        ContextHolder.setContext(projectId, refId);
-        List<Node> documents = this.nodeRepository.findAllByNodeType(CameoNodeType.DOCUMENT.getValue());
-        ElementsResponse res = this.getViews(projectId, refId, buildRequest(nodeGetHelper.convertNodesToMap(documents).keySet()), params);
+        String commitId = params.getOrDefault(CameoConstants.COMMITID, null);
+        List<ElementJson> documents = getNodePersistence().findAllByNodeType(projectId, refId,
+            commitId, CameoNodeType.DOCUMENT.getValue());
+        ElementsResponse res = this.getViews(projectId, refId, buildRequestFromJsons(documents), params);
         for (ElementJson e: res.getElements()) {
-            Optional<ElementJson> parent = nodeGetHelper.getFirstRelationshipOfType(e,
-                Arrays.asList(CameoNodeType.GROUP.getValue()), CameoConstants.OWNERID);
-            if (parent.isPresent()) {
-                e.put("_groupId", parent.get().getId());
-            }
+            Optional<ElementJson> parent = getFirstRelationshipOfType(projectId, refId, commitId, e,
+                List.of(CameoNodeType.GROUP.getValue()), CameoConstants.OWNERID);
+            parent.ifPresent(elementJson -> e.put(CameoConstants.SITECHARACTERIZATIONID, elementJson.getId()));
+
         }
         return res;
     }
 
+    @Override
     public ElementsResponse getView(String projectId, String refId, String elementId, Map<String, String> params) {
         return this.getViews(projectId, refId, buildRequest(elementId), params);
     }
 
+    @Override
     public ElementsResponse getViews(String projectId, String refId, ElementsRequest req, Map<String, String> params) {
         ElementsResponse res = this.read(projectId, refId, req, params);
         addChildViews(res, params);
         return res;
     }
 
+    @Override
     public void addChildViews(ElementsResponse res, Map<String, String> params) {
         for (ElementJson element: res.getElements()) {
             if (cameoHelper.isView(element)) {
@@ -57,11 +65,11 @@ public class CameoViewService extends CameoNodeService {
                 }
                 ElementsResponse ownedAttributes = this.read(element.getProjectId(), element.getRefId(),
                     buildRequest(ownedAttributeIds), params);
-                List<ElementJson> sorted = nodeGetHelper.sort(ownedAttributeIds, ownedAttributes.getElements());
+                List<ElementJson> filtered = JsonDomain.filter(ownedAttributeIds, ownedAttributes.getElements());
                 List<Map> childViews = new ArrayList<>();
-                for (ElementJson attr : sorted) {
+                for (ElementJson attr : filtered) {
                     String childId = (String) attr.get(CameoConstants.TYPEID);
-                    if ("Property".equals(attr.getType()) && childId != null && !childId.isEmpty()) {
+                    if (CameoConstants.PROPERTY.equals(attr.getType()) && childId != null && !childId.isEmpty()) {
                         Map<String, String> child = new HashMap<>();
                         child.put(ElementJson.ID, childId);
                         child.put(CameoConstants.AGGREGATION, (String) attr.get(CameoConstants.AGGREGATION));
@@ -75,42 +83,47 @@ public class CameoViewService extends CameoNodeService {
     }
 
     public ElementsResponse getGroups(String projectId, String refId, Map<String, String> params) {
-        ContextHolder.setContext(projectId, refId);
-        List<Node> groups = this.nodeRepository.findAllByNodeType(CameoNodeType.GROUP.getValue());
-        ElementsResponse res = this.read(projectId, refId, buildRequest(nodeGetHelper.convertNodesToMap(groups).keySet()), params);
-        for (ElementJson e: res.getElements()) {
-            Optional<ElementJson> parent = nodeGetHelper.getFirstRelationshipOfType(e,
-                Arrays.asList(CameoNodeType.GROUP.getValue()), CameoConstants.OWNERID);
-            if (parent.isPresent()) {
-                e.put("_parentId", parent.get().getId());
-            }
+        String commitId = params.getOrDefault(CameoConstants.COMMITID, null);
+        List<ElementJson> groups = getNodePersistence().findAllByNodeType(projectId, refId, commitId,
+            CameoNodeType.GROUP.getValue());
+
+        ElementsResponse res = new ElementsResponse().setElements(groups);
+        for (ElementJson e: groups) {
+            Optional<ElementJson> parent = getFirstRelationshipOfType(projectId, refId, commitId, e,
+                List.of(CameoNodeType.GROUP.getValue()), CameoConstants.OWNERID);
+            parent.ifPresent(elementJson -> e.put(CameoConstants.PARENTID, elementJson.getId()));
         }
         return res;
 }
 
     @Override
-    public void extraProcessPostedElement(ElementJson element, Node node, NodeChangeInfo info) {
+    public void extraProcessPostedElement(NodeChangeInfo info, ElementJson element) {
         //handle _childViews
         List<Map<String, String>> newChildViews = (List)element.remove(CameoConstants.CHILDVIEWS);
         if (newChildViews == null) {
-            super.extraProcessPostedElement(element, node, info);
+            super.extraProcessPostedElement(info, element);
             return;
         }
         //gather data on "old" attributes
         List<String> oldOwnedAttributeIds = (List)element.get(CameoConstants.OWNEDATTRIBUTEIDS);
         //use helper to get access to Nodes
-        NodeGetInfo oldInfo = nodeGetHelper.processGetJson(buildRequest(oldOwnedAttributeIds).getElements(), null);
+        String projectId = info.getCommitJson().getProjectId();
+        String refId = info.getCommitJson().getRefId();
+        NodeGetInfo oldInfo = getNodePersistence().findAll(projectId, refId, null,
+            buildRequest(oldOwnedAttributeIds).getElements());
         List<PropertyData> oldProperties = new ArrayList<>();
         Map<String, PropertyData> oldPropertiesTypeMapping = new HashMap<>(); //typeId to PropertyData
         for (String oldOwnedAttributeId: oldOwnedAttributeIds) {
             if (!oldInfo.getActiveElementMap().containsKey(oldOwnedAttributeId)) {
                 continue; //property doesn't exist anymore? indicates existing model inconsistency
             }
-            Node oldNode = oldInfo.getExistingNodeMap().get(oldOwnedAttributeId);
+            //TODO This probably breaks view editor. move to federated domain somehow
+            //Node oldNode = oldInfo.getExistingNodeMap().get(oldOwnedAttributeId);
             ElementJson oldJson = oldInfo.getActiveElementMap().get(oldOwnedAttributeId);
             PropertyData oldData = new PropertyData();
             oldData.setPropertyJson(oldJson);
-            oldData.setPropertyNode(oldNode);
+            //TODO This probably breaks view editor. move to federated domain somehow
+            //oldData.setPropertyNode(oldNode);
             oldProperties.add(oldData);
             String typeId = (String)oldJson.get(CameoConstants.TYPEID);
             if (typeId == null || typeId.isEmpty()) {
@@ -120,7 +133,7 @@ public class CameoViewService extends CameoNodeService {
         }
         //include project usages when finding types
         ElementsResponse oldTypeJsons = this.read(element.getProjectId(), element.getRefId(),
-            buildRequest(oldPropertiesTypeMapping.keySet()), Collections.EMPTY_MAP);
+            buildRequest(oldPropertiesTypeMapping.keySet()), Collections.emptyMap());
         for (ElementJson oldType: oldTypeJsons.getElements()) {
             oldPropertiesTypeMapping.get(oldType.getId()).setTypeJson(oldType);
             oldPropertiesTypeMapping.get(oldType.getId()).setView(cameoHelper.isView(oldType));
@@ -132,7 +145,7 @@ public class CameoViewService extends CameoNodeService {
         //go through requested _childView changes
         //get the first package element that's in the owner chain of parent class
         //  cameo/sysml1 requires associations to be placed in the first owning package, is this rule still valid?
-        Optional<ElementJson> p = nodePostHelper.getFirstRelationshipOfType(element,
+        Optional<ElementJson> p = getFirstRelationshipOfType(projectId, refId, null, element,
             Arrays.asList(CameoNodeType.PACKAGE.getValue(), CameoNodeType.GROUP.getValue()), CameoConstants.OWNERID);
         String packageId = p.isPresent() ? p.get().getId() : CameoConstants.HOLDING_BIN_PREFIX + element.getProjectId();
         List<PropertyData> newProperties = new ArrayList<>();
@@ -143,21 +156,21 @@ public class CameoViewService extends CameoNodeService {
                 //existing property and type, reuse
                 PropertyData data = oldPropertiesTypeMapping.get(typeId);
                 newProperties.add(data);
-                newAttributeIds.add(data.getPropertyNode().getNodeId());
+                newAttributeIds.add(data.getPropertyJson().getId());
                 continue;
             }
             //create new properties and association
-            PropertyData newProperty = createElementsForView(newChildView.get(CameoConstants.AGGREGATION),
-                typeId, element.getId(), packageId, info);
+            PropertyData newProperty = createElementsForView(info, newChildView.get(CameoConstants.AGGREGATION),
+                typeId, element.getId(), packageId);
             newProperties.add(newProperty);
-            newAttributeIds.add(newProperty.getPropertyNode().getNodeId());
+            newAttributeIds.add(newProperty.getPropertyJson().getId());
         }
         //go through old attributes and add back any that wasn't to a view and delete ones that's to a view but not in newProperties
         List<PropertyData> toDelete = new ArrayList<>();
         for (PropertyData oldProperty: oldProperties) {
             if (!oldProperty.isView()) {
                 newProperties.add(oldProperty);
-                newAttributeIds.add(oldProperty.getPropertyNode().getNodeId());
+                newAttributeIds.add(oldProperty.getPropertyJson().getId());
                 continue;
             }
             if (newProperties.contains(oldProperty)) {
@@ -165,17 +178,14 @@ public class CameoViewService extends CameoNodeService {
             }
             toDelete.add(oldProperty);
         }
-        deletePropertyElements(toDelete, info);
+        deletePropertyElements(projectId, refId, toDelete, info);
         //new derived ownedAttributeIds based on changes
         element.put(CameoConstants.OWNEDATTRIBUTEIDS, newAttributeIds);
-        super.extraProcessPostedElement(element, node, info);
+        super.extraProcessPostedElement(info, element);
     }
 
-    private PropertyData createElementsForView(String aggregation, String typeId, String parentId, String packageId, NodeChangeInfo info) {
+    private PropertyData createElementsForView(NodeChangeInfo info, String aggregation, String typeId, String parentId, String packageId) {
         //create new properties and association
-        Node newPropertyNode = new Node();
-        Node newAssocNode = new Node();
-        Node newAssocPropertyNode = new Node();
         String newPropertyId = UUID.randomUUID().toString();
         String newAssocId = UUID.randomUUID().toString();
         String newAssocPropertyId = UUID.randomUUID().toString();
@@ -184,30 +194,26 @@ public class CameoViewService extends CameoNodeService {
         ElementJson newAssocJson = cameoHelper.createAssociation(newAssocId, packageId,
             newAssocPropertyId, newPropertyId);
         ElementJson newAssocPropertyJson = cameoHelper.createProperty(newAssocPropertyId, "",
-            newAssocId, "none", parentId, newAssocId);
-        nodePostHelper.processElementAdded(newPropertyJson, newPropertyNode, info);
-        nodePostHelper.processElementAdded(newAssocJson, newAssocNode, info);
-        nodePostHelper.processElementAdded(newAssocPropertyJson, newAssocPropertyNode, info);
-        super.extraProcessPostedElement(newPropertyJson, newPropertyNode, info);
-        super.extraProcessPostedElement(newAssocJson, newAssocNode, info);
-        super.extraProcessPostedElement(newAssocPropertyJson, newAssocPropertyNode, info);
+            newAssocId, CameoConstants.NONE, parentId, newAssocId);
+
+        NodePersistence nodeChangeDomain = getNodePersistence();
+        nodeChangeDomain.prepareAddsUpdates(info, List.of(newPropertyJson, newAssocJson, newAssocPropertyJson));
+        super.extraProcessPostedElement(info, newPropertyJson);
+        super.extraProcessPostedElement(info, newAssocJson);
+        super.extraProcessPostedElement(info, newAssocPropertyJson);
         PropertyData newProperty = new PropertyData();
         newProperty.setAssocJson(newAssocJson);
-        newProperty.setAssocNode(newAssocNode);
         newProperty.setPropertyJson(newPropertyJson);
-        newProperty.setPropertyNode(newPropertyNode);
-        newProperty.setAssocPropertyNode(newAssocPropertyNode);
         newProperty.setAssocPropertyJson(newAssocPropertyJson);
         newProperty.setView(true);
         return newProperty;
     }
 
-    private void deletePropertyElements(List<PropertyData> properties, NodeChangeInfo info) {
+    private void deletePropertyElements(String projectId, String refId, List<PropertyData> properties, NodeChangeInfo info) {
         Set<String> assocToDelete = new HashSet<>();
         for (PropertyData oldProperty: properties) {
-            Node oldPropertyNode = oldProperty.getPropertyNode();
             ElementJson oldPropertyJson = oldProperty.getPropertyJson();
-            nodePostHelper.processElementDeleted(oldPropertyJson, oldPropertyNode, info);
+            getNodePersistence().prepareDeletes(info, List.of(oldPropertyJson));
             String assocId = (String)oldPropertyJson.get(CameoConstants.ASSOCIATIONID);
             if (assocId == null) {
                 continue;
@@ -215,20 +221,42 @@ public class CameoViewService extends CameoNodeService {
             assocToDelete.add(assocId);
         }
         Set<String> assocPropToDelete = new HashSet<>();
-        NodeGetInfo assocInfo = nodeGetHelper.processGetJson(buildRequest(assocToDelete).getElements(), null);
+        NodeGetInfo assocInfo = getNodePersistence().findAll(projectId, refId, null, buildRequest(assocToDelete).getElements());
         for (ElementJson assocJson: assocInfo.getActiveElementMap().values()) {
-            Node assocNode = assocInfo.getExistingNodeMap().get(assocJson.getId());
-            nodePostHelper.processElementDeleted(assocJson, assocNode, info);
+            getNodePersistence().prepareDeletes(info, List.of(assocJson));
             List<String> ownedEndIds = (List<String>)assocJson.get(CameoConstants.OWNEDENDIDS);
             if (ownedEndIds == null) {
                 continue;
             }
             assocPropToDelete.addAll(ownedEndIds);
         }
-        NodeGetInfo assocPropInfo = nodeGetHelper.processGetJson(buildRequest(assocPropToDelete).getElements(), null);
-        for (ElementJson assocPropJson: assocPropInfo.getActiveElementMap().values()) {
-            Node assocPropNode = assocPropInfo.getExistingNodeMap().get(assocPropJson.getId());
-            nodePostHelper.processElementDeleted(assocPropJson, assocPropNode, info);
+        NodeGetInfo assocPropInfo = getNodePersistence().findAll(projectId, refId, null, buildRequest(assocPropToDelete).getElements());
+        getNodePersistence().prepareDeletes(info, assocPropInfo.getActiveElementMap().values());
+    }
+
+    //find first element of type in types following e's relkey (assuming relkey's value is an element id)
+    private Optional<ElementJson> getFirstRelationshipOfType(String projectId, String refId, String commitId,
+            ElementJson e, List<Integer> types, String relkey) {
+        //only for latest graph
+        String nextId = (String)e.get(relkey);
+        if (nextId == null || nextId.isEmpty()) {
+            return Optional.empty();
         }
+
+        NodeGetInfo getInfo = nodePersistence.findById(projectId, refId, commitId, nextId);
+        Optional<ElementJson> next = Optional.of(getInfo.getActiveElementMap().get(nextId));
+
+        while (next.isPresent()) {
+            if (types.contains(cameoHelper.getNodeType(next.get()).getValue())) {
+                return next;
+            }
+            nextId = (String)next.get().get(relkey);
+            if (nextId == null || nextId.isEmpty()) {
+                return Optional.empty();
+            }
+            getInfo = nodePersistence.findById(projectId, refId, commitId, nextId);
+            next = Optional.of(getInfo.getActiveElementMap().get(nextId));
+        }
+        return Optional.empty();
     }
 }

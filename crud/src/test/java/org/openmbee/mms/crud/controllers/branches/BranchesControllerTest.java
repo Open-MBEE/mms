@@ -6,7 +6,6 @@ import static org.junit.Assert.*;
 
 public class BranchesControllerTest {
 
-
     private void checkFail(String id){
         assertFalse(BranchesController.isBranchIdValid(id));
     }

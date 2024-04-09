@@ -6,6 +6,8 @@ import com.fasterxml.jackson.datatype.hibernate5.Hibernate5Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.util.Properties;
 import javax.sql.DataSource;
+
+import org.openmbee.mms.core.config.Constants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -99,7 +101,7 @@ public class PersistenceJPAConfig {
                 "org.hibernate.dialect.PostgreSQLDialect"));
         properties.setProperty("hibernate.jdbc.lob.non_contextual_creation",
             env.getProperty("spring.jpa.properties.hibernate.jdbc.lob.non_contextual_creation",
-                "true"));
+                Constants.TRUE));
 
         return properties;
     }

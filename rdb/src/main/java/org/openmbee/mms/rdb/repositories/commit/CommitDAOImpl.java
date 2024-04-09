@@ -10,8 +10,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import org.openmbee.mms.core.dao.BranchDAO;
-import org.openmbee.mms.core.dao.CommitDAO;
+import org.openmbee.mms.data.dao.BranchDAO;
+import org.openmbee.mms.data.dao.CommitDAO;
 import org.openmbee.mms.core.exceptions.InternalErrorException;
 import org.openmbee.mms.data.domains.scoped.Branch;
 import org.openmbee.mms.data.domains.scoped.Commit;
@@ -51,7 +51,7 @@ public class CommitDAOImpl extends BaseDAOImpl implements CommitDAO {
             }
         }, keyHolder);
 
-        if (keyHolder.getKeyList().isEmpty()) {
+        if (keyHolder.getKeyList().isEmpty() || keyHolder.getKey() == null) {
             logger.error("commit db save failed");
             throw new InternalErrorException("Commit db save failed");
         }

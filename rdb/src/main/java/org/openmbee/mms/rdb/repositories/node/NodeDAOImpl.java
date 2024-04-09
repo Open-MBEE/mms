@@ -6,7 +6,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 
-import org.openmbee.mms.core.dao.NodeDAO;
+import org.openmbee.mms.data.dao.NodeDAO;
 import org.openmbee.mms.core.exceptions.InternalErrorException;
 import org.openmbee.mms.data.domains.scoped.Node;
 import org.openmbee.mms.rdb.repositories.BaseDAOImpl;
@@ -17,6 +17,7 @@ import org.springframework.jdbc.core.PreparedStatementCreator;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Component;
+import org.openmbee.mms.core.exceptions.NotFoundException;
 
 @Component
 public class NodeDAOImpl extends BaseDAOImpl implements NodeDAO {
@@ -37,8 +38,11 @@ public class NodeDAOImpl extends BaseDAOImpl implements NodeDAO {
                     return prepareStatement(ps, node);
                 }
             }, keyHolder);
-
-            node.setId(keyHolder.getKey().longValue());
+            if (keyHolder.getKey() != null) {
+                node.setId(keyHolder.getKey().longValue());
+            } else {
+                throw new NotFoundException("Key value was null");
+            }
         } else {
             getConn().update(new PreparedStatementCreator() {
                 public PreparedStatement createPreparedStatement(Connection connection)

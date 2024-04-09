@@ -1,4 +1,7 @@
 dependencies {
+    implementation project(':json')
+    implementation project(':core')
+
     api commonDependencies.'spring-security-core'
     api commonDependencies.'spring-data-commons'
 

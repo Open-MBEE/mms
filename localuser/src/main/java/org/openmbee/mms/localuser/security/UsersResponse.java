@@ -1,17 +1,17 @@
 package org.openmbee.mms.localuser.security;
 
-import java.util.List;
-import org.openmbee.mms.data.domains.global.User;
+import java.util.Collection;
+import org.openmbee.mms.json.UserJson;
 
 public class UsersResponse {
 
-    private List<User> users;
+    private Collection<UserJson> users;
 
-    public List<User> getUsers() {
+    public Collection<UserJson> getUsers() {
         return users;
     }
 
-    public void setUsers(List<User> users) {
+    public void setUsers(Collection<UserJson> users) {
         this.users = users;
     }
 }

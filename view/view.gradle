@@ -1,0 +1,5 @@
+dependencies {
+    implementation project(':crud')
+
+    testImplementation commonDependencies.'spring-boot-starter-test'
+}

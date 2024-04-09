@@ -1,14 +1,19 @@
 dependencies {
-    implementation project(':rdb')
     api project(':core')
 
     api commonDependencies.'spring-security-web'
 
     implementation commonDependencies.'servlet-api'
-    implementation group: 'io.jsonwebtoken', name: 'jjwt-api', version: '0.10.5'
+    implementation commonDependencies.'jjwt-api'
 
-    runtimeOnly group: 'io.jsonwebtoken', name: 'jjwt-impl', version: '0.10.5'
-    runtimeOnly group: 'io.jsonwebtoken', name: 'jjwt-jackson', version: '0.10.5'
+    runtimeOnly commonDependencies.'jjwt-impl'
+    runtimeOnly commonDependencies.'jjwt-jackson'
 
     testImplementation commonDependencies.'spring-boot-starter-test'
+}
+
+tasks {
+    processResources {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    }
 }

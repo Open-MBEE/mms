@@ -6,7 +6,6 @@ import java.util.stream.Collectors;
 
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
@@ -14,7 +13,7 @@ import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.FieldSortBuilder;
 import org.elasticsearch.search.sort.SortOrder;
-import org.openmbee.mms.core.dao.CommitIndexDAO;
+import org.openmbee.mms.data.dao.CommitIndexDAO;
 import org.openmbee.mms.core.exceptions.InternalErrorException;
 import org.openmbee.mms.elastic.utils.Index;
 import org.openmbee.mms.json.BaseJson;
@@ -201,14 +200,18 @@ public class CommitElasticDAOImpl extends BaseElasticDAOImpl<CommitJson> impleme
             QueryBuilder commitQuery = QueryBuilders.boolQuery()
                 .filter(QueryBuilders.termQuery(CommitJson.ID, commitId));
             SearchHits hits = getCommitResults(commitQuery);
-            if (hits.getTotalHits().value == 0) {
-                return new ArrayList<>();
-            }
             List<CommitJson> rawCommits = new ArrayList<>();
-            for (SearchHit hit : hits.getHits()) {
-                CommitJson ob = new CommitJson();
-                ob.putAll(hit.getSourceAsMap());
-                rawCommits.add(ob); // gets "_source"
+            if (hits.getTotalHits().value > 0) {
+                for (SearchHit hit : hits.getHits()) {
+                    CommitJson ob = new CommitJson();
+                    ob.putAll(hit.getSourceAsMap());
+                    rawCommits.add(ob); // gets "_source"
+                }
+            }
+            if (rawCommits.isEmpty()) {
+                //try getting directly using id
+                Optional<CommitJson> c = super.findById(this.getIndex(), commitId);
+                c.ifPresent(commit -> rawCommits.add(commit));
             }
             return rawCommits;
         } catch (IOException ioe) {

@@ -12,17 +12,10 @@ import org.springframework.web.client.RestTemplate;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static junit.framework.TestCase.assertNull;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -282,13 +275,13 @@ public class TwcPermissionUtilsTest {
 				.thenAnswer((invocation) -> {
 					Object[] args = invocation.getArguments();
 
-					assertEquals("http://twc.domain.com:8111/osmc/workspaces/workspaceID1/"
+					assertEquals("http://twc.domain.com:8111/osmc/"
 							+ "resources/resourceID1/roles/roleID1/users", args[0]);
 
 					return responseEntity;
 				});
 
-		actualUsers = twcPermUtils.getUsersList(workspaceId, twc, resourceId, roleId);
+		actualUsers = twcPermUtils.getUsersList(twc, resourceId, roleId);
 		assertTrue(expectedUsers.equals(actualUsers));
 
 	}
@@ -344,13 +337,13 @@ public class TwcPermissionUtilsTest {
 				.thenAnswer((invocation) -> {
 					Object[] args = invocation.getArguments();
 
-					assertEquals("http://twc.domain.com:8111/osmc/workspaces/workspaceID1/"
+					assertEquals("http://twc.domain.com:8111/osmc/"
 							+ "resources/resourceID1/roles/roleID1/users", args[0]);
 
 					return responseEntity;
 				});
 
-		actualUsers = twcPermUtils.getUsersList(workspaceId, twc, resourceId, roleId);
+		actualUsers = twcPermUtils.getUsersList(twc, resourceId, roleId);
 		assertNull(actualUsers);
 
 	}
@@ -395,7 +388,7 @@ public class TwcPermissionUtilsTest {
 					throw new RuntimeException("Test Exception -- should be caught");
 				});
 
-		actualUsers = twcPermUtils.getUsersList(workspaceId, twc, resourceId, roleId);
+		actualUsers = twcPermUtils.getUsersList(twc, resourceId, roleId);
 		assertNull(actualUsers);
 
 	}

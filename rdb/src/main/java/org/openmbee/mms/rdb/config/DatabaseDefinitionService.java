@@ -43,8 +43,6 @@ public class DatabaseDefinitionService {
     private static final String COPY_SQL = "INSERT INTO \"%s\" SELECT * FROM \"%s\"";
     private static final String COPY_IDX = "SELECT SETVAL('%s_id_seq', COALESCE((SELECT MAX(id) FROM \"%s\"), 1), true)";
 
-    private static final String INITIAL_REF = "INSERT INTO branches (id, branchid, branchname, tag, deleted, timestamp) VALUES (0, 'master', 'master', false, false, NOW());";
-
     protected final Logger logger = LoggerFactory.getLogger(getClass());
     private CrudDataSources crudDataSources;
     private Environment env;
@@ -65,6 +63,7 @@ public class DatabaseDefinitionService {
             crudDataSources.getDataSource(ContextHolder.getContext().getKey()));
         List<Object> created = new ArrayList<>();
         try {
+            logger.info("Creating database for " + project.getProjectId());
             jdbcTemplate.execute("CREATE DATABASE " + databaseProjectString(project)); //lgtm[java/sql-injection]
             created.add("Created Database");
 
@@ -72,7 +71,12 @@ public class DatabaseDefinitionService {
             created.add("Created Tables");
 
         } catch (DataAccessException e) {
-            if (e.getCause().getLocalizedMessage().toLowerCase().contains("exists")) {
+            Throwable cause = e.getCause();
+            if (cause != null) {
+                logger.error(cause.getLocalizedMessage());
+            }
+            logger.error(e.getLocalizedMessage());
+            if (cause != null && cause.getLocalizedMessage() != null && cause.getLocalizedMessage().toLowerCase().contains("exists")) {
                 generateProjectSchemaFromModels(project);
                 throw (new SQLException("Database already exists"));
             } else {
@@ -83,15 +87,16 @@ public class DatabaseDefinitionService {
         return !created.isEmpty();
     }
 
-    public void deleteProjectDatabase(Project project) throws SQLException {
+    public void deleteProjectDatabase(String projectId) throws SQLException {
         try (Connection connection = crudDataSources.getDataSource(ContextObject.DEFAULT_PROJECT).getConnection();
                 Statement statement = connection.createStatement()) {
             if ("org.postgresql.Driver".equals(env.getProperty("spring.datasource.driver-class-name"))) {
+                statement.setQueryTimeout(60);
                 statement.execute(connection.nativeSQL(
                     "SELECT pid, pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '"
-                        + databaseProjectString(project) + "';"));
+                        + databaseProjectString(projectId) + "';"));
             }
-            statement.executeUpdate(connection.nativeSQL("DROP DATABASE " + databaseProjectString(project)));
+            statement.executeUpdate(connection.nativeSQL("DROP DATABASE " + databaseProjectString(projectId)));
 			
 			//TODO: if using PG 13, can use the following
 			//statement.executeUpdate(connection.nativeSQL("DROP DATABASE " + databaseProjectString(project) + " WITH (FORCE)"));
@@ -99,8 +104,12 @@ public class DatabaseDefinitionService {
     }
 
     private String databaseProjectString(Project project) {
-		String prefix = env.getProperty("rdb.project.prefix", "");
-        return String.format("\"%s_%s\"", prefix, project.getProjectId());
+		return databaseProjectString(project.getProjectId());
+    }
+
+    private String databaseProjectString(String projectId) {
+        String prefix = env.getProperty("rdb.project.prefix", "");
+        return String.format("\"%s_%s\"", prefix, projectId);
     }
 
     public void createBranch() {
@@ -132,12 +141,6 @@ public class DatabaseDefinitionService {
             .setDelimiter(";")
             .createOnly(EnumSet.of(TargetType.DATABASE),
                 metadata.getMetadataBuilder().build());
-
-        try (Connection conn = crudDataSources.getDataSource(project).getConnection()) {
-            try (PreparedStatement ps = conn.prepareStatement(INITIAL_REF)) {
-                ps.execute();
-            }
-        }
     }
 
     public void generateBranchSchemaFromModels() {

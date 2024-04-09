@@ -13,7 +13,7 @@ import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.openmbee.mms.core.config.ContextHolder;
-import org.openmbee.mms.core.dao.ProjectIndex;
+import org.openmbee.mms.data.dao.ProjectIndex;
 import org.openmbee.mms.core.exceptions.InternalErrorException;
 import org.openmbee.mms.json.ProjectJson;
 import org.springframework.beans.factory.annotation.Autowired;

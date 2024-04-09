@@ -3,19 +3,17 @@ package org.openmbee.mms.webhooks.controllers;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.openmbee.mms.core.dao.ProjectDAO;
-import org.openmbee.mms.core.dao.WebhookDAO;
+import org.openmbee.mms.core.dao.ProjectPersistence;
 import org.openmbee.mms.core.exceptions.BadRequestException;
 import org.openmbee.mms.core.exceptions.NotFoundException;
-import org.openmbee.mms.data.domains.global.Project;
-import org.openmbee.mms.data.domains.global.Webhook;
+import org.openmbee.mms.json.ProjectJson;
 import org.openmbee.mms.webhooks.json.WebhookJson;
 import org.openmbee.mms.webhooks.objects.WebhookRequest;
 import org.openmbee.mms.webhooks.objects.WebhookResponse;
+import org.openmbee.mms.webhooks.persistence.WebhookPersistence;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -25,18 +23,18 @@ import java.util.*;
 @Tag(name = "Webhooks")
 public class WebhooksController {
 
-    private WebhookDAO webhookRepository;
-    private ProjectDAO projectRepository;
+    private ProjectPersistence projectPersistence;
+    private WebhookPersistence webhookPersistence;
     private ObjectMapper om;
 
     @Autowired
-    public void setWebhookRepository(WebhookDAO webhookRepository) {
-        this.webhookRepository = webhookRepository;
+    public void setProjectPersistence(ProjectPersistence projectPersistence) {
+        this.projectPersistence = projectPersistence;
     }
 
     @Autowired
-    public void setProjectRepository(ProjectDAO projectRepository) {
-        this.projectRepository = projectRepository;
+    public void setWebhookPersistence(WebhookPersistence webhookPersistence) {
+        this.webhookPersistence = webhookPersistence;
     }
 
     @Autowired
@@ -49,20 +47,12 @@ public class WebhooksController {
     public WebhookResponse getAllWebhooks(@PathVariable String projectId) {
 
         WebhookResponse response = new WebhookResponse();
-        List<Webhook> webhooks = webhookRepository.findAllByProject_ProjectId(projectId);
-
-        for (Webhook webhook : webhooks) {
-            WebhookJson webhookJson = new WebhookJson();
-            webhookJson.merge(convertToMap(webhook));
-            webhookJson.setId(webhook.getId().toString());
-            webhookJson.setProjectId(projectId);
-            response.getWebhooks().add(webhookJson);
-        }
+        List<WebhookJson> webhooks = webhookPersistence.findAllByProjectId(projectId);
+        response.getWebhooks().addAll(webhooks);
         return response;
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Transactional
     @PreAuthorize("@mss.hasProjectPrivilege(authentication, #projectId, 'PROJECT_CREATE_WEBHOOKS', false)")
     public WebhookResponse createOrUpdateWebhooks(@PathVariable String projectId, @RequestBody WebhookRequest webhooksPost) {
 
@@ -71,28 +61,29 @@ public class WebhooksController {
         }
 
         WebhookResponse response = new WebhookResponse();
-        Optional<Project> project = projectRepository.findByProjectId(projectId);
+        Optional<ProjectJson> project = projectPersistence.findById(projectId);
+        if(project.isEmpty()) {
+            throw new NotFoundException("Project not found");
+        }
 
         for (WebhookJson json: webhooksPost.getWebhooks()) {
-            Optional<Webhook> existing = webhookExists(json, projectId);
-            Webhook hook;
-            if (!existing.isPresent()) {
-                hook = new Webhook();
-                hook.setProject(project.get());
-            } else {
-                hook = existing.get();
+            Optional<WebhookJson> existing = webhookExists(json, projectId);
+            if (existing.isPresent()) {
+                if (!projectId.equals(existing.get().getProjectId())) {
+                    throw new BadRequestException("Cannot move webhooks between projects");
+                }
+                json.merge(existing.get());
             }
-            hook.setUrl(json.getUrl());
-            webhookRepository.save(hook);
-            json.setId(hook.getId().toString());
             json.setProjectId(projectId);
-            response.getWebhooks().add(json);
+            if(json.getId() == null) {
+                json.setId(UUID.randomUUID().toString());
+            }
+            response.getWebhooks().add(webhookPersistence.save(json));
         }
         return response;
     }
 
     @DeleteMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Transactional
     @PreAuthorize("@mss.hasProjectPrivilege(authentication, #projectId, 'PROJECT_CREATE_WEBHOOKS', false)")
     public WebhookResponse deleteWebhooks(@PathVariable String projectId, @RequestBody WebhookRequest webhookRequest) {
 
@@ -102,13 +93,13 @@ public class WebhooksController {
         }
 
         WebhookResponse response = new WebhookResponse();
-        List<Webhook> webhooks = webhookRepository.findAllByProject_ProjectId(projectId);
+        List<WebhookJson> webhooks = webhookPersistence.findAllByProjectId(projectId);
         if (webhooks.isEmpty()) {
             throw new NotFoundException(response.addMessage("No web hooks found for project"));
         }
-        for (Webhook webhook : webhooks) {
+        for (WebhookJson webhook : webhooks) {
             if (uris.contains(webhook.getUrl())) {
-                webhookRepository.delete(webhook);
+                webhookPersistence.delete(webhook);
                 response.addMessage(String.format("Web hook for project %s to %s deleted", projectId, webhook.getUrl()));
             }
         }
@@ -119,13 +110,16 @@ public class WebhooksController {
         return om.convertValue(obj, new TypeReference<Map<String, Object>>() {});
     }
 
-    private Optional<Webhook> webhookExists(WebhookJson json, String projectId) {
+    private Optional<WebhookJson> webhookExists(WebhookJson json, String projectId) {
         if (json.getId() != null) {
-            Optional<Webhook> hook = webhookRepository.findById(Long.parseLong(json.getId()));
-            if (hook.isPresent() && hook.get().getProject().getProjectId().equals(projectId)) {
+            Optional<WebhookJson> hook = webhookPersistence.findById(json.getId());
+            if(hook.isEmpty()) {
+                hook = webhookPersistence.findByProjectIdAndUrl(projectId, json.getUrl());
+            }
+            if (hook.isPresent() && hook.get().getProjectId().equals(projectId)) {
                 return hook; //ensure hook by id matches the project being requested
             }
         }
-        return webhookRepository.findByProject_ProjectIdAndUrl(projectId, json.getUrl());
+        return webhookPersistence.findByProjectIdAndUrl(projectId, json.getUrl());
     }
 }

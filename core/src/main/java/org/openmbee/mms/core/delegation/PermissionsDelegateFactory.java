@@ -1,14 +1,14 @@
 package org.openmbee.mms.core.delegation;
 
-import org.openmbee.mms.data.domains.global.Branch;
-import org.openmbee.mms.data.domains.global.Organization;
-import org.openmbee.mms.data.domains.global.Project;
+import org.openmbee.mms.json.OrgJson;
+import org.openmbee.mms.json.ProjectJson;
+import org.openmbee.mms.json.RefJson;
 
 public interface PermissionsDelegateFactory {
 
-    PermissionsDelegate getPermissionsDelegate(Project project);
+    PermissionsDelegate getPermissionsDelegate(ProjectJson project);
 
-    PermissionsDelegate getPermissionsDelegate(Organization organization);
+    PermissionsDelegate getPermissionsDelegate(OrgJson organization);
 
-    PermissionsDelegate getPermissionsDelegate(Branch branch);
+    PermissionsDelegate getPermissionsDelegate(RefJson branch);
 }

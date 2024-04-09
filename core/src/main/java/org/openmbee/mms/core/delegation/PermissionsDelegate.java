@@ -9,9 +9,11 @@ import java.util.Set;
 
 public interface PermissionsDelegate {
     boolean hasPermission(String user, Set<String> groups, String privilege);
+    boolean hasGroupPermissions(String group, String privilege);
     void initializePermissions(String creator);
     void initializePermissions(String creator, boolean inherit);
     boolean setInherit(boolean isInherit);
+    PermissionResponse getInherit();
     void setPublic(boolean isPublic);
     PermissionUpdateResponse updateUserPermissions(PermissionUpdateRequest req);
     PermissionUpdateResponse updateGroupPermissions(PermissionUpdateRequest req);

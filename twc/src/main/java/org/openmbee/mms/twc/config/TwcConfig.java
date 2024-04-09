@@ -42,8 +42,9 @@ public class TwcConfig {
         if(associatedTWC == null)
             return null;
 
+        String strippedHost = stripHost(associatedTWC);
         for(TeamworkCloud twc : getInstances()){
-            if(twc.hasKnownName(associatedTWC)){
+            if(twc.hasKnownName(strippedHost)){
                 return new TwcAuthenticationProvider(restUtils, twc);
             }
         }

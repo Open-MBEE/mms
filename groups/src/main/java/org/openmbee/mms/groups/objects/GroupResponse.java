@@ -2,11 +2,9 @@ package org.openmbee.mms.groups.objects;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Collection;
 
-import org.openmbee.mms.data.domains.global.Group;
-import org.openmbee.mms.data.domains.global.User;
+import org.openmbee.mms.json.GroupJson;
 
 public class GroupResponse {
 
@@ -14,13 +12,13 @@ public class GroupResponse {
     private String group;
 
     @Schema(nullable = true)
-    private List<String> users;
+    private Collection<String> users;
 
     public GroupResponse(){}
 
-    public GroupResponse(Group group){
+    public GroupResponse(GroupJson group, Collection<String> users){
         this.group = group.getName();
-        this.users = group.getUsers().stream().map(User::getUsername).collect(Collectors.toList());
+        this.users = users;
     }
 
     public String getGroup() {
@@ -31,11 +29,11 @@ public class GroupResponse {
         this.group = group;
     }
 
-    public List<String> getUsers() {
+    public Collection<String> getUsers() {
         return users;
     }
 
-    public void setUsers(List<String> users) {
+    public void setUsers(Collection<String> users) {
         this.users = users;
     }
 }

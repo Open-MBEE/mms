@@ -1,100 +1,36 @@
 package org.openmbee.mms.core.services;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
 import org.openmbee.mms.core.objects.Rejection;
-import org.openmbee.mms.data.domains.scoped.Node;
+import org.openmbee.mms.json.CommitJson;
 import org.openmbee.mms.json.ElementJson;
 
-public class NodeGetInfo {
+import java.util.Map;
 
-    Set<String> reqIndexIds;
+public interface NodeGetInfo {
 
-    Map<String, ElementJson> reqElementMap;
+    CommitJson getCommitJson();
 
-    Map<String, Node> existingNodeMap;
+    NodeGetInfo setCommitJson(CommitJson commitJson);
 
-    // string is node id
-    // map of element json objects
-    Map<String, ElementJson> existingElementMap;
+    Map<String, ElementJson> getReqElementMap();
 
-    Map<String, ElementJson> activeElementMap;
+    NodeGetInfo setReqElementMap(Map<String, ElementJson> reqElementMap);
 
-    Map<String, Rejection> rejected;
+    Map<String, ElementJson> getActiveElementMap();
 
-    String commitId;
+    NodeGetInfo setActiveElementMap(Map<String, ElementJson> activeElementMap);
 
+    Map<String, ElementJson> getExistingElementMap();
 
-    public Set<String> getReqIndexIds() {
-        return reqIndexIds;
-    }
+    NodeGetInfo setExistingElementMap(Map<String, ElementJson> existingElementMap);
 
-    public NodeGetInfo setReqIndexIds(Set<String> reqIndexIds) {
-        this.reqIndexIds = reqIndexIds;
-        return this;
-    }
+    Map<String, Rejection> getRejected();
 
-    public Map<String, ElementJson> getReqElementMap() {
-        return reqElementMap;
-    }
+    NodeGetInfo setRejected(Map<String, Rejection> rejected);
 
-    public NodeGetInfo setReqElementMap(Map<String, ElementJson> reqElementMap) {
-        this.reqElementMap = reqElementMap;
-        return this;
-    }
+    void addRejection(String id, Rejection rejection);
 
-    public Map<String, Node> getExistingNodeMap() {
-        return existingNodeMap;
-    }
-
-    public NodeGetInfo setExistingNodeMap(Map<String, Node> existingNodeMap) {
-        this.existingNodeMap = existingNodeMap;
-        return this;
-    }
-
-    public Map<String, ElementJson> getActiveElementMap() {
-        return activeElementMap;
-    }
-
-    public NodeGetInfo setActiveElementMap(
-        Map<String, ElementJson> activeElementMap) {
-        this.activeElementMap = activeElementMap;
-        return this;
-    }
-
-    public Map<String, ElementJson> getExistingElementMap() {
-        return existingElementMap;
-    }
-
-    public NodeGetInfo setExistingElementMap(
-        Map<String, ElementJson> existingElementMap) {
-        this.existingElementMap = existingElementMap;
-        return this;
-    }
-
-    public Map<String, Rejection> getRejected() {
-        return rejected;
-    }
-
-    public NodeGetInfo setRejected(Map<String, Rejection> rejected) {
-        this.rejected = rejected;
-        return this;
-    }
-
-    public void addRejection(String id, Rejection rejection) {
-        if (this.rejected == null) {
-            this.rejected = new HashMap<>();
-        }
-        this.rejected.put(id, rejection);
-    }
-
-    public void setCommitId(String commitId) {
-        this.commitId = commitId;
-    }
-
-    public String getCommitId() {
-        return this.commitId;
-    }
+    void setRefId(String refId);
+    String getRefId();
 
 }

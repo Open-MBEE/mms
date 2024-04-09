@@ -2,6 +2,7 @@ package org.openmbee.mms.core.objects;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class PermissionResponse {
 
@@ -43,6 +44,19 @@ public class PermissionResponse {
 
         public void setInherited(boolean inherited) {
             this.inherited = inherited;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Permission that = (Permission) o;
+            return inherited == that.inherited && name.equals(that.name) && role.equals(that.role);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(name, role, inherited);
         }
     }
 

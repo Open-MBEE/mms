@@ -1,30 +1,29 @@
 package org.openmbee.mms.twc.services;
 
-import org.openmbee.mms.core.config.ContextHolder;
 import org.openmbee.mms.core.config.Formats;
-import org.openmbee.mms.core.dao.BranchDAO;
+import org.openmbee.mms.core.dao.BranchPersistence;
 import org.openmbee.mms.core.exceptions.InternalErrorException;
 import org.openmbee.mms.core.exceptions.NotFoundException;
 import org.openmbee.mms.core.objects.CommitsResponse;
 import org.openmbee.mms.core.services.NodeService;
 import org.openmbee.mms.crud.services.DefaultNodeService;
-import org.openmbee.mms.data.domains.scoped.Branch;
-import org.openmbee.mms.data.domains.scoped.Commit;
 import org.openmbee.mms.json.CommitJson;
+import org.openmbee.mms.json.RefJson;
 import org.openmbee.mms.twc.constants.TwcConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 @Service("twcRevisionMmsCommitMapService")
 public class TwcRevisionMmsCommitMapService extends DefaultNodeService implements NodeService {
-    private BranchDAO branchRepository;
+    private BranchPersistence branchPersistence;
 
     @Autowired
-    public void setBranchRepository(BranchDAO branchRepository) {
-        this.branchRepository = branchRepository;
+    public void setBranchPersistence(BranchPersistence branchPersistence) {
+        this.branchPersistence = branchPersistence;
     }
 
     /**
@@ -39,13 +38,12 @@ public class TwcRevisionMmsCommitMapService extends DefaultNodeService implement
         if (revisionId == null || revisionId.isEmpty()) {
             return commitsResponse.addMessage("Revision id can not be empty");
         }
-        ContextHolder.setContext(projectId);
-        Optional<CommitJson> commitJsonDetails = commitIndex.findById(commitId);
+        Optional<CommitJson> commitJsonDetails = commitPersistence.findById(projectId, commitId);
         try {
             if (commitJsonDetails.isPresent()) {
                 CommitJson commitObj = commitJsonDetails.get();
                 commitObj.put(TwcConstants.TWCREVISIONID, revisionId);
-                commitsResponse.getCommits().add(this.commitIndex.update(commitObj));
+                commitsResponse.getCommits().add(commitPersistence.update(commitObj));
             } else {
                 throw new NotFoundException(commitsResponse);
             }
@@ -66,18 +64,12 @@ public class TwcRevisionMmsCommitMapService extends DefaultNodeService implement
      */
     public List<CommitJson> getTwcRevisionList(String projectId, String refId, Boolean reverseOrder, Integer limit) {
         List<CommitJson> commits = new ArrayList<>();
-        ContextHolder.setContext(projectId);
-        Optional<Branch> ref = branchRepository.findByBranchId(refId);
+        Optional<RefJson> ref = branchPersistence.findById(projectId, refId);
         if (!ref.isPresent()) {
             throw new NotFoundException("Branch not found");
         }
         try {
-            List<Commit> refCommits = commitRepository.findByRefAndTimestampAndLimit(ref.get(), null, 0);
-            Set<String> commitIds = new HashSet<>();
-            refCommits.stream().forEach(commit -> {
-                commitIds.add(commit.getCommitId());
-            });
-            List<CommitJson> commitJsonList = commitIndex.findAllById(commitIds);
+            List<CommitJson> commitJsonList = commitPersistence.findByProjectAndRefAndTimestampAndLimit(projectId, refId, null, 0);
             if (null != commitJsonList && commitJsonList.size() > 0) {
                 commitJsonList.stream().forEach(commitJsonData -> {
                     if (commitJsonData.containsKey(TwcConstants.TWCREVISIONID)) {
@@ -109,8 +101,9 @@ public class TwcRevisionMmsCommitMapService extends DefaultNodeService implement
         @Override
         public int compare(CommitJson o, CommitJson t1) {
             try {
-                Date d1 = Formats.SDF.parse((String) o.get(CommitJson.CREATED));
-                Date d2 = Formats.SDF.parse((String) t1.get(CommitJson.CREATED));
+                SimpleDateFormat dateFormat = new SimpleDateFormat(Formats.DATE_FORMAT);
+                Date d1 = dateFormat.parse((String) o.get(CommitJson.CREATED));
+                Date d2 = dateFormat.parse((String) t1.get(CommitJson.CREATED));
                 return ascending ? d1.compareTo(d2) : d2.compareTo(d1);
             } catch (ParseException e) {
                 logger.error("Error parsing commit dates: " + e.getMessage());

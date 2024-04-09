@@ -47,11 +47,10 @@ public class CameoProjectService extends DefaultProjectService implements Projec
     }
 
     @Override
-    public RefJson createRefJson(ProjectJson project, String docId){
-        RefJson branchJson = super.createRefJson(project, docId);
+    public RefJson createMasterRefJson(ProjectJson project){
+        RefJson branchJson = super.createMasterRefJson(project);
         branchJson.put("twcId",Constants.MASTER_BRANCH);
         return branchJson;
-
     }
 
     private static ElementJson createNode(String id, String name, ProjectJson projectJson) {
