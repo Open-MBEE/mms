@@ -99,14 +99,6 @@ public class VeController extends BaseController {
 
         ViewService viewService = genericServiceFactory.getServiceForSchema( ViewService.class , getProjectType(projectId));
         ElementsResponse res = viewService.createOrUpdate(projectId, refId, req, params, auth.getName());
-        // ToDo : the following is just a workaround till the indexing part is synchronized W
-        try {
-            Thread.sleep(1000);    // Providing some delay for the indexing to complete as it uses async api call
-        } catch(InterruptedException e) {
-            Thread.currentThread().interrupt();
-        } catch (Exception e) {
-            // No need to handle this......
-        }
         viewService.addChildViews(res, params);
         return res;
     }

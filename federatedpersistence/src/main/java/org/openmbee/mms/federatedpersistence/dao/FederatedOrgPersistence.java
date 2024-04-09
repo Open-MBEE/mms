@@ -33,10 +33,7 @@ public class FederatedOrgPersistence implements OrgPersistence {
     @Override
     public OrgJson save(OrgJson orgJson) {
         Optional<Organization> organizationOptional = orgDAO.findByOrganizationId(orgJson.getId());
-        if (organizationOptional.isPresent()) {
-            throw new ForbiddenException("org " + orgJson.getId() + " already exists");
-        }
-        Organization organization = new Organization();
+        Organization organization = organizationOptional.orElse(new Organization());
         organization.setOrganizationId(orgJson.getId());
         organization.setOrganizationName(orgJson.getName());
         return getOrgJson(orgDAO.save(organization));

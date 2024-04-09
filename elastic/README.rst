@@ -21,6 +21,16 @@ The following are a list of options to configure the Elastic Module for MMS.
   elasticsearch.http
     The transport protocol to use to connect to the Elasticsearch server or cluster. Required.
 
+  elasticsearch.username
+    Username, Optional.
+
+    | `Default: null`
+
+  elasticsearch.password
+    Password, Optional.
+
+    | `Default: null`
+
   elasticsearch.limit.result
     The maximum number of results a single search request should return. Optional.
 

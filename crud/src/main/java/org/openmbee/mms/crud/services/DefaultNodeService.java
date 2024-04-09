@@ -94,6 +94,34 @@ public class DefaultNodeService implements NodeService {
     public ElementsResponse read(String projectId, String refId, String id,
         Map<String, String> params) {
 
+        if (id != null && !id.isEmpty()) {
+            logger.debug("ElementId given: {}", id);
+            ElementsRequest req = buildRequest(id);
+            return read(projectId, refId, req, params);
+        }
+        String commitId = params.getOrDefault(CrudConstants.COMMITID, null);
+        if (commitId == null) {
+            Optional<CommitJson> commitJson = commitPersistence.findLatestByProjectAndRef(projectId, refId);
+            if (!commitJson.isPresent()) {
+                throw new InternalErrorException("Could not find latest commit for project and ref");
+            }
+            commitId = commitJson.get().getId();
+        }
+        // If no id is provided, return all
+        ElementsResponse response = new ElementsResponse();
+        logger.debug("No ElementId given");
+
+        List<ElementJson> nodes = nodePersistence.findAll(projectId, refId, commitId);
+        response.getElements().addAll(nodes);
+        response.getElements().forEach(v -> v.setRefId(refId));
+        response.setCommitId(commitId);
+        return response;
+    }
+
+    @Override
+    public ElementsResponse read(String projectId, String refId, ElementsRequest req,
+        Map<String, String> params) {
+
         String commitId = params.getOrDefault(CrudConstants.COMMITID, null);
         if (commitId == null) {
             Optional<CommitJson> commitJson = commitPersistence.findLatestByProjectAndRef(projectId, refId);
@@ -103,38 +131,13 @@ public class DefaultNodeService implements NodeService {
             commitId = commitJson.get().getId();
         }
 
-        ElementsResponse response = new ElementsResponse();
-        if (id != null && !id.isEmpty()) {
-            logger.debug("ElementId given: {}", id);
-
-            NodeGetInfo getInfo = nodePersistence.findById(projectId, refId, commitId, id);
-            if (!getInfo.getRejected().isEmpty()) {
-                response.addRejection(getInfo.getRejected().get(id));
-            } else {
-                response.getElements().add(getInfo.getActiveElementMap().get(id));
-            }
-
-        } else {
-            // If no id is provided, return all
-            logger.debug("No ElementId given");
-
-            List<ElementJson> nodes = nodePersistence.findAll(projectId, refId, commitId);
-            response.getElements().addAll(nodes);
-        }
-        response.getElements().forEach(v -> v.setRefId(refId));
-        return response;
-    }
-
-    @Override
-    public ElementsResponse read(String projectId, String refId, ElementsRequest req,
-        Map<String, String> params) {
-
-        String commitId = params.getOrDefault(CrudConstants.COMMITID, null);
         NodeGetInfo info = nodePersistence.findAll(projectId, refId, commitId, req.getElements());
 
         ElementsResponse response = new ElementsResponse();
         response.getElements().addAll(info.getActiveElementMap().values());
+        response.getElements().forEach(v -> v.setRefId(refId));
         response.setRejected(new ArrayList<>(info.getRejected().values()));
+        response.setCommitId(commitId);
         return response;
     }
 
@@ -158,10 +161,10 @@ public class DefaultNodeService implements NodeService {
             overwriteJson, preserveTimestamps);
         changes = nodePersistence.prepareAddsUpdates(changes, req.getElements());
 
-        for(ElementJson element : changes.getUpdatedMap().values()) {
+        for (ElementJson element : changes.getUpdatedMap().values()) {
             extraProcessPostedElement(changes, element);
         }
-        if(req.getDeletes() != null) {
+        if (req.getDeletes() != null) {
             changes = nodePersistence.prepareDeletes(changes, req.getDeletes());
         }
 
@@ -240,34 +243,10 @@ public class DefaultNodeService implements NodeService {
         cmjs.setSource(req.getSource());
         cmjs.setRefId(refId);
         cmjs.setProjectId(projectId);
-        if(commitId != null) {
-            cmjs.setCommitId(commitId);
+        if (commitId != null) {
+            cmjs.setId(commitId);
+            cmjs.setDocId(commitId);
         }
         return cmjs;
     }
-
-    protected List<ElementJson> filter(List<String> ids, List<ElementJson> orig) {
-        Map<String, ElementJson> map = convertJsonToMap(orig);
-        List<ElementJson> ret = new ArrayList<>();
-        for (String id: ids) {
-            if (map.containsKey(id)) {
-                ret.add(map.get(id));
-            }
-        }
-        return ret;
-    }
-
-    protected Map<String, ElementJson> convertJsonToMap(List<ElementJson> elements) {
-        Map<String, ElementJson> result = new HashMap<>();
-        for (ElementJson elem : elements) {
-            if (elem == null) {
-                continue;
-            }
-            if (elem.getId() != null && !elem.getId().isBlank()) {
-                result.put(elem.getId(), elem);
-            }
-        }
-        return result;
-    }
-
 }

@@ -48,7 +48,7 @@ public class LocalUserController {
     }
 
     @GetMapping(value = "/users")
-    @PreAuthorize(AuthorizationConstants.IS_MMSADMIN)
+    @PreAuthorize("isAuthenticated()")
     public UsersResponse getUsers(@RequestParam(required = false) String user) {
         UsersResponse res = new UsersResponse();
         Collection<UserJson> users = new ArrayList<>();

@@ -25,6 +25,8 @@ public interface CommitIndexDAO {
 
     List<CommitJson> elementHistory(String id, Set<String> commitIds);
 
+    List<CommitJson> elementDeletedHistory(String id, Collection<String> commitIds);
+
     CommitJson update(CommitJson commitJson);
 
 }

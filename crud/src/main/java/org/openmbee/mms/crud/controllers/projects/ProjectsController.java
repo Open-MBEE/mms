@@ -103,8 +103,12 @@ public class ProjectsController extends BaseController {
                 }
 
                 Optional<ProjectJson> existingOptional = projectPersistence.findById(json.getProjectId());
-                if(existingOptional.isPresent()) {
-                    //Project exists, should merge the json
+                if (existingOptional.isPresent()) {
+                    //Project exists, should merge the json, but not if schema is different
+                    if (json.getProjectType() != null && !json.getProjectType().equals(existingOptional.get().getProjectType())) {
+                        response.addRejection(new Rejection(json, 400, "Cannot change existing project schema"));
+                        continue;
+                    }
                     json.merge(existingOptional.get());
                 } else {
                     //New Project
@@ -141,25 +145,30 @@ public class ProjectsController extends BaseController {
                         response.addRejection(new Rejection(json, 403, "No permission to change project"));
                         continue;
                     }
+                    boolean updatePermissions = false;
                     if (json.getOrgId() != null && !json.getOrgId().isEmpty()) {
-                        projectPersistence.findById(json.getProjectId()).ifPresent(projectJson -> {
+                        Optional<ProjectJson> projectJsonOption = projectPersistence.findById(json.getProjectId());
+                        if (projectJsonOption.isPresent()) {
+                            ProjectJson projectJson = projectJsonOption.get();
                             String existingOrg = projectJson.getOrgId();
                             if (!json.getOrgId().equals(existingOrg)) {
                                 if (!mss.hasProjectPrivilege(auth, json.getProjectId(), Privileges.PROJECT_DELETE.name(), false) ||
                                         !mss.hasOrgPrivilege(auth, json.getOrgId(), Privileges.ORG_CREATE_PROJECT.name(), false)) {
                                     response.addRejection(
                                         new Rejection(json, 403, "No permission to move project org"));
+                                    continue;
                                 }
                                 if (projectPersistence.inheritsPermissions(projectJson.getProjectId())) {
-                                    permissionService.setProjectInherit(false, json.getProjectId());
-                                    permissionService.setProjectInherit(true, json.getProjectId());
+                                    updatePermissions = true;
                                 }
                             }
-
-                            }
-                            );
+                        }
                     }
                     response.getProjects().add(ps.update(json));
+                    if (updatePermissions) {
+                        permissionService.setProjectInherit(false, json.getProjectId());
+                        permissionService.setProjectInherit(true, json.getProjectId());
+                    }
                 }
             } catch (MMSException ex) {
                 response.addRejection(new Rejection(json, ex.getCode().value(), ex.getMessageObject().toString()));

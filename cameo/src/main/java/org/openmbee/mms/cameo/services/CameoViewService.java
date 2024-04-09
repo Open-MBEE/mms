@@ -19,6 +19,7 @@ import org.openmbee.mms.core.objects.ElementsRequest;
 import org.openmbee.mms.core.objects.ElementsResponse;
 import org.openmbee.mms.core.services.NodeChangeInfo;
 import org.openmbee.mms.core.services.NodeGetInfo;
+import org.openmbee.mms.crud.domain.JsonDomain;
 import org.openmbee.mms.json.ElementJson;
 import org.openmbee.mms.view.services.PropertyData;
 import org.openmbee.mms.view.services.ViewService;
@@ -37,7 +38,7 @@ public class CameoViewService extends CameoNodeService implements ViewService {
             Optional<ElementJson> parent = getFirstRelationshipOfType(projectId, refId, commitId, e,
                 List.of(CameoNodeType.GROUP.getValue()), CameoConstants.OWNERID);
             parent.ifPresent(elementJson -> e.put(CameoConstants.SITECHARACTERIZATIONID, elementJson.getId()));
-            
+
         }
         return res;
     }
@@ -64,7 +65,7 @@ public class CameoViewService extends CameoNodeService implements ViewService {
                 }
                 ElementsResponse ownedAttributes = this.read(element.getProjectId(), element.getRefId(),
                     buildRequest(ownedAttributeIds), params);
-                List<ElementJson> filtered = filter(ownedAttributeIds, ownedAttributes.getElements());
+                List<ElementJson> filtered = JsonDomain.filter(ownedAttributeIds, ownedAttributes.getElements());
                 List<Map> childViews = new ArrayList<>();
                 for (ElementJson attr : filtered) {
                     String childId = (String) attr.get(CameoConstants.TYPEID);
@@ -86,8 +87,8 @@ public class CameoViewService extends CameoNodeService implements ViewService {
         List<ElementJson> groups = getNodePersistence().findAllByNodeType(projectId, refId, commitId,
             CameoNodeType.GROUP.getValue());
 
-        ElementsResponse res = this.read(projectId, refId, buildRequestFromJsons(groups), params);
-        for (ElementJson e: res.getElements()) {
+        ElementsResponse res = new ElementsResponse().setElements(groups);
+        for (ElementJson e: groups) {
             Optional<ElementJson> parent = getFirstRelationshipOfType(projectId, refId, commitId, e,
                 List.of(CameoNodeType.GROUP.getValue()), CameoConstants.OWNERID);
             parent.ifPresent(elementJson -> e.put(CameoConstants.PARENTID, elementJson.getId()));

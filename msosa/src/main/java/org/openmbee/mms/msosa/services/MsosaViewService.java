@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import org.openmbee.mms.crud.domain.JsonDomain;
 import org.openmbee.mms.msosa.MsosaConstants;
 import org.openmbee.mms.msosa.MsosaNodeType;
 import org.openmbee.mms.core.config.ContextHolder;
@@ -60,7 +61,7 @@ public class MsosaViewService extends MsosaNodeService implements ViewService {
                 List<String> ownedAttributeIds = (List) element.get(MsosaConstants.OWNEDATTRIBUTEIDS);
                 ElementsResponse ownedAttributes = this.read(element.getProjectId(), element.getRefId(),
                     buildRequest(ownedAttributeIds), params);
-                List<ElementJson> filtered = filter(ownedAttributeIds, ownedAttributes.getElements());
+                List<ElementJson> filtered = JsonDomain.filter(ownedAttributeIds, ownedAttributes.getElements());
                 List<Map> childViews = new ArrayList<>();
                 for (ElementJson attr : filtered) {
                     String childId = (String) attr.get(MsosaConstants.TYPEID);
@@ -153,7 +154,7 @@ public class MsosaViewService extends MsosaNodeService implements ViewService {
                 //existing property and type, reuse
                 PropertyData data = oldPropertiesTypeMapping.get(typeId);
                 newProperties.add(data);
-                newAttributeIds.add(data.getPropertyJson().getId()); 
+                newAttributeIds.add(data.getPropertyJson().getId());
                 continue;
             }
             //create new properties and association

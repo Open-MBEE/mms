@@ -64,7 +64,8 @@ public abstract class AbstractDefaultPermissionsDelegate implements PermissionsD
         }
         if (!group.isPresent()) {
             group = Optional.of(new Group(p.getName()));
-            getGroupRepo().save(group.get());
+            Group g = getGroupRepo().save(group.get());
+            group = Optional.of(g);
         }
         return Pair.of(group.get(), role.get());
     }

@@ -65,13 +65,15 @@ public class ProjectDAOImpl implements ProjectDAO {
         try {
             projectRepository.findByProjectId(projectId).ifPresent(v -> projectRepository.delete(v));
         } catch (Exception ex) {
-            logger.error("Could not delete project from project Repository");
+            logger.error("Could not delete project from project Repository", ex);
+            throw new InternalErrorException(ex);
         }
 
         try {
             projectOperations.deleteProjectDatabase(projectId);
         } catch (SQLException ex) {
-            logger.error("DELETE PROJECT DATABASE EXCEPTION\nPotential connection issue, query statement mishap, or unexpected RDB behavior.");
+            logger.error("DELETE PROJECT DATABASE EXCEPTION\nPotential connection issue, query statement mishap, or unexpected RDB behavior.", ex);
+            throw new InternalErrorException(ex);
         }
     }
 

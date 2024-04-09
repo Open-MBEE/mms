@@ -1,0 +1,1025 @@
+{
+	"info": {
+		"_postman_id": "1ddbdc4a-79cc-4bec-8118-7e600e908b38",
+		"name": "MakeBranchFromCommit",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "3693486"
+	},
+	"item": [
+		{
+			"name": "login using admin",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"",
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"    ",
+							"});",
+							"",
+							"pm.test(\"response has token\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.token).to.be.a('string');",
+							"    pm.environment.set(\"token\", jsonData.token);",
+							"",
+							"});",
+							"",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"username\": \"{{adminUsername}}\",\n\t\"password\": \"{{adminPassword}}\"\n}"
+				},
+				"url": {
+					"raw": "{{host}}/authentication",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"authentication"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "add org",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"response has org branch_from_commit\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.orgs[0].id).to.eql('branch_from_commit_org');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"orgs\": [\n\t\t{\n\t\t\t\"id\": \"branch_from_commit_org\",\n\t\t\t\"name\": \"branch_from_commit_org\"\n\t\t}\n\t]\n}"
+				},
+				"url": {
+					"raw": "{{host}}/orgs",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"orgs"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "add project",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"response has project branch_from_commit\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.projects[0].id).to.eql('branch_from_commit');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"projects\": [\n\t\t{\n\t\t\t\"id\": \"branch_from_commit\", \n\t\t\t\"name\": \"branch_from_commit\",\n\t\t\t\"orgId\": \"branch_from_commit_org\",\n\t\t\t\"schema\": \"default\"\n\t\t}\n\t]\n}"
+				},
+				"url": {
+					"raw": "{{host}}/projects",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "add a and b to master",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"response has elements\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.elements.length).to.eql(2);",
+							"});",
+							"",
+							"pm.environment.set(\"addABCommitId\", pm.response.json().commitId);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"elements\": [\n\t\t{\n\t\t\t\"id\": \"a\",\n\t\t\t\"name\": \"a\"\n\t\t}, {\n\t\t\t\"id\": \"b\", \n\t\t\t\"name\": \"b\"\n\t\t}\n\t]\n}"
+				},
+				"url": {
+					"raw": "{{host}}/projects/branch_from_commit/refs/master/elements",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"branch_from_commit",
+						"refs",
+						"master",
+						"elements"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "add c to master",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"response has elements\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.elements.length).to.eql(1);",
+							"});",
+							"",
+							"pm.environment.set(\"addCCommitId\", pm.response.json().commitId);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"elements\": [\n\t\t{\n\t\t\t\"id\": \"c\",\n\t\t\t\"name\": \"c\"\n\t\t}\n\t]\n}"
+				},
+				"url": {
+					"raw": "{{host}}/projects/branch_from_commit/refs/master/elements",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"branch_from_commit",
+						"refs",
+						"master",
+						"elements"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "add d to master",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"response has elements\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.elements.length).to.eql(1);",
+							"});",
+							"",
+							"pm.environment.set(\"addDCommitId\", pm.response.json().commitId);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"elements\": [\n\t\t{\n\t\t\t\"id\": \"d\",\n\t\t\t\"name\": \"d\"\n\t\t}\n\t]\n}"
+				},
+				"url": {
+					"raw": "{{host}}/projects/branch_from_commit/refs/master/elements",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"branch_from_commit",
+						"refs",
+						"master",
+						"elements"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "delete a in master",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"response has elements\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.elements.length).to.eql(1);",
+							"});",
+							"",
+							"pm.environment.set(\"deleteACommitId\", pm.response.json().commitId);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{host}}/projects/branch_from_commit/refs/master/elements/a",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"branch_from_commit",
+						"refs",
+						"master",
+						"elements",
+						"a"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "update b in master",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"response has elements\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.elements.length).to.eql(1);",
+							"});",
+							"",
+							"pm.environment.set(\"updateBCommitId\", pm.response.json().commitId);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"elements\": [\n        {\n\t\t\t\"id\": \"b\", \n\t\t\t\"name\": \"b updated\"\n\t\t}\n\t]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{host}}/projects/branch_from_commit/refs/master/elements",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"branch_from_commit",
+						"refs",
+						"master",
+						"elements"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "delete c in master",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"response has elements\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.elements.length).to.eql(1);",
+							"});",
+							"",
+							"pm.environment.set(\"deleteCCommitId\", pm.response.json().commitId);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"elements\": [\n        {\n\t\t\t\"id\": \"c\"\n\t\t}\n\t]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{host}}/projects/branch_from_commit/refs/master/elements",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"branch_from_commit",
+						"refs",
+						"master",
+						"elements"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "add e to master",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"response has elements\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.elements.length).to.eql(1);",
+							"});",
+							"",
+							"pm.environment.set(\"addECommitId\", pm.response.json().commitId);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"elements\": [\n\t\t{\n\t\t\t\"id\": \"e\",\n\t\t\t\"name\": \"e\"\n\t\t}\n\t]\n}"
+				},
+				"url": {
+					"raw": "{{host}}/projects/branch_from_commit/refs/master/elements",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"branch_from_commit",
+						"refs",
+						"master",
+						"elements"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "recurrect c in master",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"response has elements\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.elements.length).to.eql(1);",
+							"});",
+							"",
+							"pm.environment.set(\"resurrectCCommitId\", pm.response.json().commitId);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"elements\": [\n\t\t{\n\t\t\t\"id\": \"c\",\n\t\t\t\"name\": \"c\"\n\t\t}\n\t]\n}"
+				},
+				"url": {
+					"raw": "{{host}}/projects/branch_from_commit/refs/master/elements",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"branch_from_commit",
+						"refs",
+						"master",
+						"elements"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "create branch from \"add d to master\"",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"branch created with right parentRef and commit id\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.refs[0].id).to.eql('addDCommitId_branch');",
+							"    pm.expect(jsonData.refs[0].parentRefId).to.eql('master');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"refs\": [\n\t\t{\n\t\t\t\"id\": \"addDCommitId_branch\",\n\t\t\t\"name\": \"addDCommitId_branch\",\n\t\t\t\"type\": \"Branch\",\n\t\t\t\"parentCommitId\": \"{{addDCommitId}}\"\n\t\t}\n\t]\n}"
+				},
+				"url": {
+					"raw": "{{host}}/projects/branch_from_commit/refs",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"branch_from_commit",
+						"refs"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "create branch from \"delete c\"",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"branch created with right parentRef and commit id\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.refs[0].id).to.eql('deleteCCommitId_branch');",
+							"    pm.expect(jsonData.refs[0].parentRefId).to.eql('master');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"refs\": [\n\t\t{\n\t\t\t\"id\": \"deleteCCommitId_branch\",\n\t\t\t\"name\": \"deleteCCommitId_branch\",\n\t\t\t\"type\": \"Branch\",\n\t\t\t\"parentCommitId\": \"{{deleteCCommitId}}\"\n\t\t}\n\t]\n}"
+				},
+				"url": {
+					"raw": "{{host}}/projects/branch_from_commit/refs",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"branch_from_commit",
+						"refs"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "create branch from \"resurrect c\"",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"branch created with right parentRef and commit id\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.refs[0].id).to.eql('resurrectCCommitId_branch');",
+							"    pm.expect(jsonData.refs[0].parentRefId).to.eql('master');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"refs\": [\n\t\t{\n\t\t\t\"id\": \"resurrectCCommitId_branch\",\n\t\t\t\"name\": \"resurrectCCommitId_branch\",\n\t\t\t\"type\": \"Branch\",\n\t\t\t\"parentCommitId\": \"{{resurrectCCommitId}}\"\n\t\t}\n\t]\n}"
+				},
+				"url": {
+					"raw": "{{host}}/projects/branch_from_commit/refs",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"branch_from_commit",
+						"refs"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "try to change parentCommitId on existing branch",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"400 response\", function () {",
+							"    pm.response.to.have.status(400);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"refs\": [\n\t\t{\n\t\t\t\"id\": \"resurrectCCommitId_branch\",\n\t\t\t\"name\": \"resurrectCCommitId_branch\",\n\t\t\t\"type\": \"Branch\",\n\t\t\t\"parentCommitId\": \"{{deleteCCommitId}}\"\n\t\t}\n\t]\n}"
+				},
+				"url": {
+					"raw": "{{host}}/projects/branch_from_commit/refs",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"branch_from_commit",
+						"refs"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "add more metadata to existing branch",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"200 response\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"refs\": [\n\t\t{\n\t\t\t\"id\": \"resurrectCCommitId_branch\",\n\t\t\t\"name\": \"resurrectCCommitId_branch\",\n\t\t\t\"type\": \"Branch\",\n\t\t\t\"newAttribute\": \"new data\"\n\t\t}\n\t]\n}"
+				},
+				"url": {
+					"raw": "{{host}}/projects/branch_from_commit/refs",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"branch_from_commit",
+						"refs"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get elements from branch from \"add d to master\"",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"response has a,b,c,d\", function () {",
+							"    var jsonData = pm.response.json();",
+							"",
+							"    pm.expect(jsonData.elements.length).to.eql(4);",
+							"    var result = jsonData.elements.map(e => ({id: e.id}));",
+							"    pm.expect(result).to.deep.have.members([{id: 'a'}, {id: 'b'}, {id: 'c'}, {id: 'd'}]);",
+							"    pm.expect(jsonData.commitId).to.eql(pm.environment.get('addDCommitId'));",
+							"    ",
+							"})",
+							"",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{host}}/projects/branch_from_commit/refs/addDCommitId_branch/elements",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"branch_from_commit",
+						"refs",
+						"addDCommitId_branch",
+						"elements"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get elements from branch from \"delete c\"",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"response has b,d\", function () {",
+							"    var jsonData = pm.response.json();",
+							"",
+							"    pm.expect(jsonData.elements.length).to.eql(2);",
+							"    var result = jsonData.elements.map(e => ({id: e.id, name: e.name}));",
+							"    pm.expect(result).to.deep.have.members([{id: 'b', name: 'b updated'}, {id: 'd', name: 'd'}]);",
+							"    pm.expect(jsonData.commitId).to.eql(pm.environment.get('deleteCCommitId'));",
+							"    ",
+							"})",
+							"",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{host}}/projects/branch_from_commit/refs/deleteCCommitId_branch/elements",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"branch_from_commit",
+						"refs",
+						"deleteCCommitId_branch",
+						"elements"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get elements from branch from \"resurrect c\"",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"response has b,c,d,e\", function () {",
+							"    var jsonData = pm.response.json();",
+							"",
+							"    pm.expect(jsonData.elements.length).to.eql(4);",
+							"    var result = jsonData.elements.map(e => ({id: e.id}));",
+							"    pm.expect(result).to.deep.have.members([{id: 'b'}, {id: 'c'}, {id: 'd'}, {id: 'e'}]);",
+							"    pm.expect(jsonData.commitId).to.eql(pm.environment.get('resurrectCCommitId'));",
+							"    ",
+							"})",
+							"",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{host}}/projects/branch_from_commit/refs/resurrectCCommitId_branch/elements",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"branch_from_commit",
+						"refs",
+						"resurrectCCommitId_branch",
+						"elements"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get commits from \"add d to master\"",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"response has right commit history\", function () {",
+							"    var jsonData = pm.response.json();",
+							"",
+							"    pm.expect(jsonData.commits.length).to.eql(3);",
+							"    var result = jsonData.commits.map(e => ({id: e.id}));",
+							"    pm.expect(result).to.deep.include.ordered.members([",
+							"        {id: pm.environment.get('addDCommitId')}, ",
+							"        {id: pm.environment.get('addCCommitId')}, ",
+							"        {id: pm.environment.get('addABCommitId')}",
+							"        ]);",
+							"    ",
+							"})",
+							"",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{host}}/projects/branch_from_commit/refs/addDCommitId_branch/commits",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"branch_from_commit",
+						"refs",
+						"addDCommitId_branch",
+						"commits"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get commits from \"delete c\"",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"response has right commit history\", function () {",
+							"    var jsonData = pm.response.json();",
+							"",
+							"    pm.expect(jsonData.commits.length).to.eql(6);",
+							"    var result = jsonData.commits.map(e => ({id: e.id}));",
+							"    pm.expect(result).to.deep.include.ordered.members([",
+							"        {id: pm.environment.get('deleteCCommitId')},",
+							"        {id: pm.environment.get('updateBCommitId')},",
+							"        {id: pm.environment.get('deleteACommitId')},",
+							"        {id: pm.environment.get('addDCommitId')}, ",
+							"        {id: pm.environment.get('addCCommitId')}, ",
+							"        {id: pm.environment.get('addABCommitId')},",
+							"        ]);",
+							"",
+							"})",
+							"",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{host}}/projects/branch_from_commit/refs/deleteCCommitId_branch/commits",
+					"host": [
+						"{{host}}"
+					],
+					"path": [
+						"projects",
+						"branch_from_commit",
+						"refs",
+						"deleteCCommitId_branch",
+						"commits"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}

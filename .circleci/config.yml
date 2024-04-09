@@ -20,27 +20,36 @@ jobs:
 
       - setup_remote_docker
 
-      - run: 
+      - run:
           name: "Create and start all services from the docker-compose configuration"
           command: |
             cp example/src/main/resources/application.properties.example ./example/src/main/resources/application.properties
+            mkdir -p jacocoJars
+            curl -L -o ./jacocoJars/jacocoagent.jar "https://repo1.maven.org/maven2/org/jacoco/org.jacoco.agent/0.8.7/org.jacoco.agent-0.8.7-runtime.jar"
+            curl -L -o ./jacocoJars/jacococli.jar "https://repo1.maven.org/maven2/org/jacoco/org.jacoco.cli/0.8.7/org.jacoco.cli-0.8.7-nodeps.jar"
             docker-compose up --build -d
             docker run --network container:mms curlimages/curl --retry 8 --retry-delay 10 --retry-max-time 90 --retry-connrefused http://mms:8080/healthcheck
 
-      - run: 
+      - run:
           name: "Run and test Postman Collection"
           command: |
             docker create -v /etc/newman --name mms_test_configs alpine:3.4 /bin/true
             docker cp example/. mms_test_configs:/etc/newman
-            docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run crud.postman_collection.json -e test-env.json --delay-request 1000
-            docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run cameo.postman_collection.json -e test-env.json --delay-request 1000
+            docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run crud.postman_collection.json -e test-env.json --delay-request 500
+            docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run getAtCommits.postman_collection.json -e test-env.json --delay-request 500
+            docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run makeBranchFromCommit.postman_collection.json -e test-env.json --delay-request 500
+            docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run cameo.postman_collection.json -e test-env.json --delay-request 500
             docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run jupyter.postman_collection.json -e test-env.json --delay-request 500
             docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run localauth.postman_collection.json -e test-env.json --delay-request 500
-            docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run permissions.postman_collection.json -e test-env.json --delay-request 1000
+            docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run permissions.postman_collection.json -e test-env.json --delay-request 500
             docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run search.postman_collection.json -e test-env.json --delay-request 1000
-            docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run artifacts.postman_collection.json -e test-env.json --delay-request 1000
+            docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run artifacts.postman_collection.json -e test-env.json --delay-request 500
             docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run elastic.postman_collection.json -e test-env.json --delay-request 500
             docker run --volumes-from mms_test_configs --network container:mms -t postman/newman run groups.postman_collection.json -e test-env.json --delay-request 500
+            
+            docker stop mms
+            mkdir -p jacocoOutput
+            docker cp mms:/mms/jacocoOutput/jacoco-it.exec ./jacocoOutput/jacoco-it.exec
 
       - persist_to_workspace:
             root: /home/circleci/
@@ -51,10 +60,17 @@ jobs:
       executor: openjdk_executor
       working_directory: /home/circleci/mms
       steps:
-          - checkout
+          - attach_workspace:
+                at: ~/
           - run:
                 name: Build classes to scan
-                command: ./gradlew build -x test
+                command: |
+                    ./gradlew build -x test
+                    mkdir -p TEMPORARYclassfiles
+                    cp -r */build/classes/java/main/* TEMPORARYclassfiles/
+                    java -jar jacocoJars/jacococli.jar report jacocoOutput/jacoco-it.exec --classfiles TEMPORARYclassfiles/ --xml ./jacocoOutput/jacocoXMLReport
+                    rm -r TEMPORARYclassfiles
+
           - sonarcloud/scan
 
   deploy_snapshot:
@@ -85,6 +101,8 @@ workflows:
                   tags:
                       only: /[0-9.]+(-(a|b|rc)[0-9]+)?/
         - scan:
+              requires:
+                  - build_and_test
               filters:
                   tags:
                       only: /[0-9.]+(-(a|b|rc)[0-9]+)?/

@@ -26,7 +26,7 @@ author = 'OpenMBEE'
 master_doc = 'index'
 
 # The full version, including alpha/beta/rc tags
-release = '4.0.19'
+release = '4.0.20'
 
 
 # -- General configuration ---------------------------------------------------

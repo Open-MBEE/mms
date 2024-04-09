@@ -82,50 +82,56 @@ public class DefaultBranchService implements BranchService {
         branch.setCreated(Formats.FORMATTER.format(now));
         branch.setDeleted(false);
         branch.setProjectId(projectId);
-        branch.setStatus(CrudConstants.CREATED);
+        branch.setStatus(CrudConstants.CREATING);
 
         //Ensure that the type is of Branch
         if (branch.getType() == null || branch.getType().isEmpty()) {
             branch.setType(Constants.BRANCH_TYPE);
         }
 
-
         //Find parent branch
         String parentRefId;
-        if (branch.getParentRefId() != null) {
+        Optional<CommitJson> parentCommit = null;
+        if (branch.getParentCommitId() != null && !branch.getParentCommitId().isEmpty()) {
+            parentCommit = commitPersistence.findById(projectId, branch.getParentCommitId());
+            if (!parentCommit.isPresent()) {
+                throw new BadRequestException("Parent commit cannot be determined or found");
+            }
+            parentRefId = parentCommit.get().getRefId();
+            branch.setParentRefId(parentRefId);
+        } else if (branch.getParentRefId() != null && !branch.getParentRefId().isEmpty()) {
             parentRefId = branch.getParentRefId();
         } else {
             parentRefId = Constants.MASTER_BRANCH;
             branch.setParentRefId(parentRefId);
         }
         Optional<RefJson> parentRefOption = branchPersistence.findById(projectId, parentRefId);
-        if(!parentRefOption.isPresent()) {
+        if (!parentRefOption.isPresent()) {
             throw new BadRequestException("Parent branch cannot be determined");
         }
 
         //Find parent commit
         // AND the commit federated are expecting the branches to be in PG
-        Optional<CommitJson> parentCommit;
-        if(branch.getParentCommitId() != null) {
-            parentCommit = commitPersistence.findById(projectId, branch.getParentCommitId());
-        } else {
+        if (parentCommit == null || !parentCommit.isPresent()) {
             parentCommit = commitPersistence.findLatestByProjectAndRef(projectId, parentRefId);
             parentCommit.ifPresent(parent ->
                 branch.setParentCommitId(parent.getId())
             );
         }
-        if(!parentCommit.isPresent()) {
-            throw new BadRequestException("Parent commit cannot be determined");
+        if (!parentCommit.isPresent()) {
+            throw new BadRequestException("Parent commit cannot be determined or found");
         }
 
         //Do branch creation
         try {
             RefJson committedBranch = branchPersistence.save(branch);
             nodePersistence.branchElements(parentRefOption.get(), parentCommit.get(), committedBranch);
+            committedBranch.setStatus(CrudConstants.CREATED);
+            branchPersistence.update(committedBranch);
             //TODO transaction commit
             eventPublisher.forEach(pub -> pub.publish(
                 EventObject.create(projectId, committedBranch.getId(), "branch_created", committedBranch)));
-            return branch;
+            return committedBranch;
         } catch (Exception e) {
             //TODO transaction rollback
             logger.error("Couldn't create branch: {}", branch.getId(), e);

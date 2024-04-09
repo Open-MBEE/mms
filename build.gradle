@@ -65,6 +65,7 @@ subprojects {
 
     group = "org.openmbee.mms"
     version = rootProject.version
+    ext['jackson-bom.version'] = jacksonVersion
 
     Map<String, String> commonDependencies = rootProject.ext.commonDependencies
 

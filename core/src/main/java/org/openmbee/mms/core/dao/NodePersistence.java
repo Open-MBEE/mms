@@ -21,7 +21,7 @@ public interface NodePersistence {
 
     NodeChangeInfo commitChanges(NodeChangeInfo nodeChangeInfo);
 
-    NodeGetInfo findById(String elementId, String refId, String commitId, String id);
+    NodeGetInfo findById(String projectId, String refId, String commitId, String elementId);
 
     List<ElementJson> findAllByNodeType(String projectId, String refId, String commitId, int nodeType);
 

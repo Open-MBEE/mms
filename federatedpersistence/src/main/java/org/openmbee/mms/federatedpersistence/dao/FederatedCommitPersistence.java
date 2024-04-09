@@ -41,7 +41,7 @@ public class FederatedCommitPersistence implements CommitPersistence {
         ContextHolder.setContext(commitJson.getProjectId());
         Commit commit = new Commit();
         commit.setComment(commitJson.getComment());
-        commit.setCommitId(commitJson.getDocId());
+        commit.setCommitId(commitJson.getId());
         commit.setCreator(commitJson.getCreator());
         commit.setBranchId(commitJson.getRefId());
         commit.setCommitType(CommitType.COMMIT);
@@ -54,7 +54,11 @@ public class FederatedCommitPersistence implements CommitPersistence {
         } catch (Exception e) {
             logger.error("Couldn't create commit: {}", commitJson.getId(), e);
             //Need to clean up in case of partial creation
-            deleteById(commitJson.getProjectId(), commitJson.getId());
+            try {
+                deleteById(commitJson.getProjectId(), commitJson.getId());
+            } catch (Exception ex) {
+                logger.error("Commit cleanup error: ", ex);
+            }
             throw new InternalErrorException("Could not create commit");
         }
     }
@@ -68,10 +72,10 @@ public class FederatedCommitPersistence implements CommitPersistence {
         if (commitOptional.isPresent()) {
             Instant now = Instant.now();
             commitJson.setModified(Formats.FORMATTER.format(now));
-
+            commitJson.setDocId(commitJson.getId());
             Commit commit = commitOptional.get();
             commit.setComment(commitJson.getComment());
-            commit.setTimestamp(now);
+            //commit.setTimestamp(now);
             commitDAO.save(commit);
             return commitIndexDAO.update(commitJson);
         }
@@ -106,7 +110,7 @@ public class FederatedCommitPersistence implements CommitPersistence {
             }
         });
         List<CommitJson> commits = commitIndexDAO.findAllById(foundCommitIds);
-        commits.sort(Comparator.comparing(BaseJson::getCreated));
+        commits.sort(Comparator.comparing(CommitJson::getCreated).reversed());
         return commits;
     }
 
@@ -157,27 +161,33 @@ public class FederatedCommitPersistence implements CommitPersistence {
     }
 
     @Override
-    public List<CommitJson> elementHistory(String projectId, String elementId, Set<String> commitDocIds) {
+    public List<CommitJson> elementHistory(String projectId, String refId, String elementId) {
         ContextHolder.setContext(projectId);
-        List<CommitJson> commits = commitIndexDAO.elementHistory(elementId, commitDocIds);
+        Optional<Branch> branchOptional = branchDAO.findByBranchId(refId);
+        if(!branchOptional.isPresent()) {
+            return new ArrayList<>();
+        }
+        Branch b = branchOptional.get();
+        List<Commit> commitList = commitDAO.findByRefAndTimestampAndLimit(b, null, 0);
+        Set<String> commitIds = new HashSet<>();
+        for (Commit commit: commitList) {
+            commitIds.add(commit.getCommitId());
+        }
+        List<CommitJson> commits = commitIndexDAO.elementHistory(elementId, commitIds);
         commits.sort(Comparator.comparing(CommitJson::getCreated).reversed());
         return commits;
     }
 
     @Override
     public Optional<CommitJson> deleteById(String projectId, String commitId) {
+        // this is used for potentially cleaning up a failed commit save
+        // should not be used intentionally
         ContextHolder.setContext(projectId);
-        Optional<Commit> commitOptional = commitDAO.findByCommitId(commitId);
-        try {
-            Optional<CommitJson> commitJsonOptional =  commitOptional.isPresent() ?
-                commitIndexDAO.findById(commitOptional.get().getCommitId()) : Optional.empty();
-            if (commitJsonOptional.isPresent()) {
-                commitIndexDAO.deleteById(commitJsonOptional.get().getDocId());
-                return commitJsonOptional;
-            }
-        } catch (Exception e) {
-            throw new InternalErrorException("Could not delete commit");
+        Optional<CommitJson> commitJsonOptional = commitIndexDAO.findById(commitId);
+        if (commitJsonOptional.isPresent()) {
+            commitIndexDAO.deleteById(commitId);
+            return commitJsonOptional;
         }
-        throw new NotFoundException("Could not delete commit");
+        return Optional.empty();
     }
 }

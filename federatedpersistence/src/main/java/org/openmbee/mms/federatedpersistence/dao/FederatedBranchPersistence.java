@@ -44,7 +44,7 @@ public class FederatedBranchPersistence implements BranchPersistence {
     @Override
     public RefJson save(RefJson refJson) {
         //Master branch special case
-        boolean isMasterBranch = refJson.getName().equals(Constants.MASTER_BRANCH);
+        boolean isMasterBranch = refJson.getId().equals(Constants.MASTER_BRANCH);
 
         //Fill in docId
         if (refJson.getDocId() == null || refJson.getDocId().isEmpty()) {
@@ -72,7 +72,7 @@ public class FederatedBranchPersistence implements BranchPersistence {
         globalBranch.setInherit(true);
 
         //Master branch case. Can skip parent branch and parent commit check
-        if(!isMasterBranch) {
+        if (!isMasterBranch) {
             //Validate parent branch
             Optional<Branch> refOption = branchDAO.findByBranchId(scopedBranch.getParentRefId());
             if (!refOption.isPresent()) {
@@ -80,18 +80,9 @@ public class FederatedBranchPersistence implements BranchPersistence {
             }
 
             //Validate parent commit
-            Optional<Commit> parentCommit = commitDAO.findLatestByRef(refOption.get());
+            Optional<Commit> parentCommit = commitDAO.findByCommitId(refJson.getParentCommitId());
             if (!parentCommit.isPresent()) {
-                throw new InternalErrorException("Cannot determine latest commit of branch.");
-            }
-
-            if (refJson.getParentCommitId() != null) {
-                if (!refJson.getParentCommitId().equals(parentCommit.get().getCommitId())) {
-                    //This DAO cannot create branches from historic versions
-                    throw new BadRequestException("Internal Error: Invalid branch creation logic.");
-                }
-            } else {
-                refJson.setParentCommitId(parentCommit.get().getCommitId());
+                throw new InternalErrorException("Cannot determine parent commit.");
             }
             parentCommit.ifPresent(parent -> scopedBranch.setParentCommit(parent.getId()));
         }
@@ -109,7 +100,12 @@ public class FederatedBranchPersistence implements BranchPersistence {
 
     @Override
     public RefJson update(RefJson refJson) {
-        return save(refJson);
+        ContextHolder.setContext(refJson.getProjectId());
+        Optional<Branch> existing = branchDAO.findByBranchId(refJson.getId());
+        existing.get().setDeleted(refJson.isDeleted());
+        branchDAO.save(existing.get());
+        branchIndexDAO.update(refJson);
+        return refJson;
     }
 
     @Override

@@ -74,7 +74,7 @@ public class BranchesController extends BaseController {
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("@mss.hasProjectPrivilege(authentication, #projectId, 'PROJECT_CREATE_BRANCH', false)")
-    public RefsResponse createRefs(
+    public RefsResponse createRefs( //this can also handle update
         @PathVariable String projectId,
         @RequestBody RefsRequest projectsPost,
         Authentication auth) {
@@ -92,24 +92,24 @@ public class BranchesController extends BaseController {
                     response.addRejection(new Rejection(branch, 400, "Branch id is invalid."));
                     continue;
                 }
-
-                RefJson res;
-                branch.setCreator(auth.getName());
-                if (branch.getParentCommitId() == null || branch.getParentCommitId().isEmpty()) {
-                    Optional<RefJson> existingOptional = branchPersistence.findById(projectId, branch.getId());
-                    if (existingOptional.isPresent()) {
-                        //Branch exists, should merge the json
-                        branch.merge(existingOptional.get());
-                        res = branchService.updateBranch(projectId, branch);
-                    } else {
-                        res = branchService.createBranch(projectId, branch);
+                Optional<RefJson> existingOptional = branchPersistence.findById(projectId, branch.getId());
+                if (existingOptional.isPresent()) {
+                    //Branch exists, should merge the json, but cannot change parent ref or commit
+                    //if branch exists it will get resurrected if it was deleted
+                    RefJson existing = existingOptional.get();
+                    if (branch.getParentRefId() != null && !branch.getParentRefId().equals(existing.getParentRefId()) ||
+                        branch.getParentCommitId() != null && !branch.getParentCommitId().equals(existing.getParentCommitId())) {
+                        response.addRejection(new Rejection(branch, 400, "Cannot change existing branch's origin"));
+                        continue;
                     }
-                } else {
-                    //TODO implement branching from historical commit
-                    response.addRejection(new Rejection(branch, 400, "Branching from historical commits is not implemented."));
+                    branch.merge(existingOptional.get());
+                    RefJson res = branchService.updateBranch(projectId, branch);
+                    response.getRefs().add(res);
                     continue;
                 }
-
+                RefJson res;
+                branch.setCreator(auth.getName());
+                res = branchService.createBranch(projectId, branch);
                 permissionService.initBranchPerms(projectId, branch.getId(), true, auth.getName());
                 response.getRefs().add(res);
             } catch (MMSException e) {

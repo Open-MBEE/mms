@@ -22,7 +22,7 @@ public class BaseJson<T> extends HashMap<String, Object> {
     public static final String CREATED = "_created";
     public static final String COMMITID = "_commitId";
     public static final String TYPE = "type";
-    public static final String IS_DELETED = "deleted";
+    public static final String IS_DELETED = "_deleted";
 
     public String getId() {
         return (String) this.get(ID);

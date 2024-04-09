@@ -23,7 +23,7 @@ public interface CommitPersistence {
 
     List<CommitJson> findByProjectAndRefAndTimestampAndLimit(String projectId, String refId, Instant timestamp, int limit);
 
-    List<CommitJson> elementHistory(String projectId, String elementId, Set<String> commitDocIds);
+    List<CommitJson> elementHistory(String projectId, String refId, String elementId);
 
     Optional<CommitJson> deleteById(String projectId, String commitId);
 

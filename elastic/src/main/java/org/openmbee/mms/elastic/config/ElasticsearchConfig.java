@@ -24,15 +24,15 @@ public class ElasticsearchConfig {
     @Value("${elasticsearch.http}")
     private String elasticsearchHttp;
 
-    @Value("${elasticsearch.password}")
+    @Value("${elasticsearch.password:#{null}}")
     private String elasticsearchPassword;
-    @Value("${elasticsearch.username}")
+    @Value("${elasticsearch.username:#{null}}")
     private String elasticsearchUsername;
 
     @Bean(name = "clientElastic", destroyMethod = "close")
     public RestHighLevelClient restClient() {
 
-        
+
 
         RestClientBuilder builder = RestClient.builder(new HttpHost(elasticsearchHost, elasticsearchPort, elasticsearchHttp));
         builder.setRequestConfigCallback(requestConfigBuilder -> requestConfigBuilder.setConnectTimeout(10000).setSocketTimeout(1000000));

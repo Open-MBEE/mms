@@ -9,6 +9,7 @@ import org.openmbee.mms.core.objects.ElementsRequest;
 import org.openmbee.mms.core.objects.ElementsResponse;
 import org.openmbee.mms.core.objects.Rejection;
 import org.openmbee.mms.core.services.NodeChangeInfo;
+import org.openmbee.mms.crud.domain.JsonDomain;
 import org.openmbee.mms.json.ElementJson;
 import org.openmbee.mms.crud.services.DefaultNodeService;
 import org.openmbee.mms.core.services.NodeService;
@@ -59,7 +60,7 @@ public class JupyterNodeService extends DefaultNodeService implements NodeServic
             ElementsRequest req2 = new ElementsRequest();
             req2.setElements(req2s);
             ElementsResponse cells = this.read(projectId, refId, req2, params);
-            Map<String, ElementJson> cellmap = convertJsonToMap(cells.getElements());
+            Map<String, ElementJson> cellmap = JsonDomain.convertJsonToMap(cells.getElements());
             e.put(JupyterConstants.CELLS, order((List<String>)e.get(JupyterConstants.CELLS), cellmap));
         }
         res.getElements().removeAll(nonNotebooks);

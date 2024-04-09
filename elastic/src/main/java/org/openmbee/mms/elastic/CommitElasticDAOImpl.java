@@ -123,6 +123,33 @@ public class CommitElasticDAOImpl extends BaseElasticDAOImpl<CommitJson> impleme
         return query;
     }
 
+    @Override
+    public List<CommitJson> elementDeletedHistory(String id, Collection<String> commitIds) {
+        QueryBuilder query = QueryBuilders.boolQuery()
+            .filter(QueryBuilders.termQuery("deleted.id", id))
+            .filter(QueryBuilders.termsQuery(CommitJson.ID, commitIds));
+        try {
+            List<CommitJson> commits = new ArrayList<>();
+            SearchHits hits = getCommitResults(query);
+            if (hits.getTotalHits().value == 0) {
+                return new ArrayList<>();
+            }
+            for (SearchHit hit : hits.getHits()) {
+                Map<String, Object> source = hit.getSourceAsMap();// gets "_source"
+                CommitJson ob = newInstance();
+                ob.putAll(source);
+                ob.remove(CommitJson.ADDED);
+                ob.remove(CommitJson.UPDATED);
+                ob.remove(CommitJson.DELETED);
+                commits.add(ob);
+            }
+            return commits;
+        } catch (IOException e) {
+            logger.error(e.getMessage(), e);
+            throw new InternalErrorException(e);
+        }
+    }
+
     /**
      * Returns the commit history of a element
      * <p> Returns a list of commit metadata for the specified id
@@ -173,14 +200,18 @@ public class CommitElasticDAOImpl extends BaseElasticDAOImpl<CommitJson> impleme
             QueryBuilder commitQuery = QueryBuilders.boolQuery()
                 .filter(QueryBuilders.termQuery(CommitJson.ID, commitId));
             SearchHits hits = getCommitResults(commitQuery);
-            if (hits.getTotalHits().value == 0) {
-                return new ArrayList<>();
-            }
             List<CommitJson> rawCommits = new ArrayList<>();
-            for (SearchHit hit : hits.getHits()) {
-                CommitJson ob = new CommitJson();
-                ob.putAll(hit.getSourceAsMap());
-                rawCommits.add(ob); // gets "_source"
+            if (hits.getTotalHits().value > 0) {
+                for (SearchHit hit : hits.getHits()) {
+                    CommitJson ob = new CommitJson();
+                    ob.putAll(hit.getSourceAsMap());
+                    rawCommits.add(ob); // gets "_source"
+                }
+            }
+            if (rawCommits.isEmpty()) {
+                //try getting directly using id
+                Optional<CommitJson> c = super.findById(this.getIndex(), commitId);
+                c.ifPresent(commit -> rawCommits.add(commit));
             }
             return rawCommits;
         } catch (IOException ioe) {

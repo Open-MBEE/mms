@@ -74,7 +74,7 @@ public class DefaultPermissionService implements PermissionService {
 
     @Override
     public void initBranchPerms(String projectId, String branchId, boolean inherit, String creator) {
-        RefJson branch = getBranch(projectId, branchId, BRANCH_NOTFOUND_BEHAVIOR.CREATE);
+        RefJson branch = getBranch(projectId, branchId, BRANCH_NOTFOUND_BEHAVIOR.THROW);
         if(branch == null) {
             logger.error("Error initiating branch permissions " + projectId + " / " + branchId);
             throw new InternalErrorException("Could not initiate branch permissions");
@@ -166,7 +166,7 @@ public class DefaultPermissionService implements PermissionService {
     @Override
     public PermissionUpdatesResponse setProjectInherit(boolean isInherit, String projectId) {
         PermissionUpdatesResponseBuilder responseBuilder = new PermissionUpdatesResponseBuilder();
-        responseBuilder.setInherit(true);
+        responseBuilder.setInherit(isInherit);
         ProjectJson project = getProject(projectId);
         PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(project);
         if (permissionsDelegate.setInherit(isInherit)) {
@@ -348,11 +348,13 @@ public class DefaultPermissionService implements PermissionService {
             switch (mode) {
                 case THROW:
                     throw new NotFoundException("Branch " + projectId + " " + branchId + " not found");
+                /* branch should never be created here
                 case CREATE:
                     RefJson b = new RefJson();
                     b.setProjectId(projectId);
                     b.setRefId(branchId);
                     return branchPersistence.save(b);
+                */
                 default:
                     //do nothing
                     break;

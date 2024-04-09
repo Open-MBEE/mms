@@ -58,11 +58,12 @@ public abstract class NodeChangeDomain extends JsonDomain {
         element.setCreated(commitJson.getCreated());
     }
 
-    public void processElementUpdated(NodeChangeInfo info, ElementJson element, ElementJson existing) {
-        if(nodeUpdateFilters.stream().anyMatch(f -> !f.filterUpdate(info, element, existing))) {
-            return;
+    public boolean processElementUpdated(NodeChangeInfo info, ElementJson element, ElementJson existing) {
+        if (nodeUpdateFilters.stream().anyMatch(f -> !f.filterUpdate(info, element, existing))) {
+            return false;
         }
         processElementAddedOrUpdated(info, element);
+        return true;
     }
 
     protected void processElementAddedOrUpdated(NodeChangeInfo info, ElementJson element) {
@@ -83,19 +84,10 @@ public abstract class NodeChangeDomain extends JsonDomain {
     }
 
     public void processElementDeleted(NodeChangeInfo info, ElementJson element) {
-        //TODO Probably don't need this (see method below)
-        element.setIsDeleted("true");
     }
 
     public NodeChangeInfo processDeleteJson(NodeChangeInfo info, Collection<ElementJson> elements) {
-
-        for(ElementJson element : elements) {
-            //TODO I don't think we need to do this by default, it shouldn't come back if deleted
-            if (Boolean.parseBoolean(element.getIsDeleted())) {
-                info.addRejection(element.getId(), new Rejection(element, 304, "Already deleted"));
-                continue;
-            }
-
+        for (ElementJson element : elements) {
             ElementJson request = info.getReqElementMap().get(element.getId());
             request.putAll(element);
             processElementDeleted(info, request);
@@ -117,9 +109,6 @@ public abstract class NodeChangeDomain extends JsonDomain {
     public abstract NodeChangeInfo processPostJson(NodeChangeInfo nodeChangeInfo, Collection<ElementJson> elements);
 
 
-    public void addExistingElements(NodeChangeInfo nodeChangeInfo, List<ElementJson> existingElements) {
-        nodeGetDomain.addExistingElements(nodeChangeInfo, existingElements);
-    }
 
     public abstract void primeNodeChangeInfo(NodeChangeInfo nodeChangeInfo, Collection<ElementJson> transactedElements);
 }

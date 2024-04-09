@@ -82,10 +82,10 @@ public class FederatedProjectPersistence implements ProjectPersistence {
     @Transactional
     public Collection<ProjectJson> findAllByOrgId(String orgId) {
         Optional<Organization> org = orgRepository.findByOrganizationId(orgId);
-        if(org.isEmpty()) {
+        if (org.isEmpty()) {
             throw new NotFoundException("org not found");
         }
-        if(org.get().getProjects() == null) {
+        if (org.get().getProjects() == null) {
             return List.of();
         }
         return org.get().getProjects().stream().map(project -> {
@@ -100,21 +100,17 @@ public class FederatedProjectPersistence implements ProjectPersistence {
         try {
             ContextHolder.clearContext();
             projectDAO.delete(projectId);
-        } catch (Exception ex){
-            message = message.concat("Project DAO, cannot delete. ");
+        } catch (Exception e) {
+            message.concat(e.getMessage());
         }
         try {
             ContextHolder.setContext(projectId);
             projectIndexDAO.delete(projectId);
-            if(!message.isEmpty()) {
-                message = message.concat("Project index DAO deleted ");
-            }
-        } catch (Exception ex){
-            message = message.concat("Project index DAO, cannot delete. ");
+        } catch (Exception e) {
+            message.concat(e.getMessage());
         }
-
-        if(!message.isEmpty()) {
-            throw new NotFoundException(message);
+        if (!message.isEmpty()) {
+            throw new InternalErrorException(message);
         }
     }
 

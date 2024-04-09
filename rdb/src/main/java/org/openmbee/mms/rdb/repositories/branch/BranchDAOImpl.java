@@ -37,7 +37,7 @@ public class BranchDAOImpl extends BaseDAOImpl implements BranchDAO {
 
         if (branch.getId() == null) {
             ContextHolder.setContext(ContextHolder.getContext().getProjectId(), branch.getBranchId());
-            if(!Constants.MASTER_BRANCH.equals(branch.getBranchId())) {
+            if (!Constants.MASTER_BRANCH.equals(branch.getBranchId())) {
                 branchesOperations.createBranch();
                 branchesOperations.copyTablesFromParent(branch.getBranchId(), branch.getParentRefId(), null);
             }
@@ -56,7 +56,6 @@ public class BranchDAOImpl extends BaseDAOImpl implements BranchDAO {
             } else {
                 throw new NotFoundException("Key value was null");
             }
-            
         } else {
             getConn().update(new PreparedStatementCreator() {
                 public PreparedStatement createPreparedStatement(Connection connection)

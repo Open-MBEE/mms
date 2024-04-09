@@ -10,6 +10,7 @@ import org.openmbee.mms.core.security.MethodSecurityService;
 import org.openmbee.mms.core.services.HierarchicalNodeService;
 import org.openmbee.mms.core.services.NodeChangeInfo;
 import org.openmbee.mms.core.services.NodeGetInfo;
+import org.openmbee.mms.crud.CrudConstants;
 import org.openmbee.mms.crud.services.DefaultNodeService;
 import org.openmbee.mms.json.CommitJson;
 import org.openmbee.mms.json.ElementJson;
@@ -42,17 +43,17 @@ public class CameoNodeService extends DefaultNodeService implements Hierarchical
     public ElementsResponse read(String projectId, String refId, ElementsRequest req,
             Map<String, String> params) {
 
-        String commitId = params.getOrDefault(CameoConstants.COMMITID, null);
+        String commitId = params.getOrDefault(CrudConstants.COMMITID, null);
         if (commitId == null) {
             Optional<CommitJson> commitJson = commitPersistence.findLatestByProjectAndRef(projectId, refId);
             if (!commitJson.isPresent()) {
                 throw new InternalErrorException("Could not find latest commit for project and ref");
             }
-            commitId = commitJson.get().getId();   
+            commitId = commitJson.get().getId();
         }
 
         NodeGetInfo info = getNodePersistence().findAll(projectId, refId, commitId, req.getElements());
-        
+        info.getActiveElementMap().values().forEach((e) -> e.setRefId(refId));
         if (!info.getRejected().isEmpty()) {
             //continue looking in visible mounted projects for elements if not all found
             NodeGetInfo curInfo = info;
@@ -61,9 +62,11 @@ public class CameoNodeService extends DefaultNodeService implements Hierarchical
 
             int i = 1; //0 is entry project, already gotten
             while (!curInfo.getRejected().isEmpty() && i < usages.size()) {
+                final int j = i;
                 ElementsRequest reqNext = buildRequest(curInfo.getRejected().keySet());
                 //TODO use the right commitId in child if commitId is present in params :: same commit Id is not working for child
                 curInfo = getNodePersistence().findAll(usages.get(i).getFirst(), usages.get(i).getSecond(), "", reqNext.getElements());
+                curInfo.getActiveElementMap().values().forEach((e) -> e.setRefId(usages.get(j).getSecond()));
                 info.getActiveElementMap().putAll(curInfo.getActiveElementMap());
                 curInfo.getActiveElementMap().forEach((id, json) -> info.getRejected().remove(id));
                 curInfo.getRejected().forEach((id, rejection) -> {
@@ -78,6 +81,7 @@ public class CameoNodeService extends DefaultNodeService implements Hierarchical
         ElementsResponse response = new ElementsResponse();
         response.getElements().addAll(info.getActiveElementMap().values());
         response.setRejected(new ArrayList<>(info.getRejected().values()));
+        response.setCommitId(commitId);
         return response;
     }
 

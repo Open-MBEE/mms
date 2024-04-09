@@ -1,7 +1,9 @@
 package org.openmbee.mms.federatedpersistence.domain;
 
 import org.openmbee.mms.core.config.Constants;
+import org.openmbee.mms.core.config.Formats;
 import org.openmbee.mms.crud.domain.NodeUpdateFilter;
+import org.openmbee.mms.data.dao.CommitDAO;
 import org.openmbee.mms.data.dao.NodeDAO;
 import org.openmbee.mms.data.dao.NodeIndexDAO;
 import org.openmbee.mms.core.exceptions.InternalErrorException;
@@ -9,7 +11,7 @@ import org.openmbee.mms.core.objects.Rejection;
 import org.openmbee.mms.core.services.NodeChangeInfo;
 import org.openmbee.mms.crud.domain.CommitDomain;
 import org.openmbee.mms.crud.domain.NodeChangeDomain;
-import org.openmbee.mms.crud.domain.NodeGetDomain;
+import org.openmbee.mms.data.domains.scoped.Commit;
 import org.openmbee.mms.data.domains.scoped.Node;
 import org.openmbee.mms.federatedpersistence.dao.FederatedNodeChangeInfo;
 import org.openmbee.mms.federatedpersistence.dao.FederatedNodeChangeInfoImpl;
@@ -34,16 +36,18 @@ public class FederatedNodeChangeDomain extends NodeChangeDomain {
     protected FederatedElementDomain elementDomain;
     protected NodeDAO nodeRepository;
     protected NodeIndexDAO nodeIndex;
+    protected CommitDAO commitDAO;
 
     @Autowired
-    public FederatedNodeChangeDomain(NodeGetDomain nodeGetDomain, CommitDomain commitDomain,
+    public FederatedNodeChangeDomain(CommitDomain commitDomain,
             FederatedNodeGetDomain getDomain, NodeDAO nodeRepository, NodeIndexDAO nodeIndex, FederatedElementDomain elementDomain,
-            List<NodeUpdateFilter> nodeUpdateFilters) {
-        super(nodeGetDomain, commitDomain, nodeUpdateFilters);
+            List<NodeUpdateFilter> nodeUpdateFilters, CommitDAO commitDAO) {
+        super(getDomain, commitDomain, nodeUpdateFilters);
         this.getDomain = getDomain;
         this.nodeRepository = nodeRepository;
         this.nodeIndex = nodeIndex;
         this.elementDomain = elementDomain;
+        this.commitDAO = commitDAO;
     }
 
     @Override
@@ -54,14 +58,14 @@ public class FederatedNodeChangeDomain extends NodeChangeDomain {
     @Override
     public NodeChangeInfo initInfo(CommitJson commitJson, boolean overwrite, boolean preserveTimestamps) {
         commitJson.setId(UUID.randomUUID().toString());
-        commitJson.setDocId(commitJson.getId()); 
+        commitJson.setDocId(commitJson.getId());
 
         NodeChangeInfo info =  super.initInfo(commitJson, overwrite, preserveTimestamps);
         if(info instanceof FederatedNodeChangeInfo) {
             ((FederatedNodeChangeInfo)info).setOldDocIds(new HashSet<>());
             ((FederatedNodeChangeInfo)info).setReqIndexIds(new HashSet<>());
             ((FederatedNodeChangeInfo)info).setToSaveNodeMap(new HashMap<>());
-        } else {  
+        } else {
             throw new InternalErrorException("Unexpected NodeChangeInfo type in FederatedNodeChangeDomain");
         }
         return info;
@@ -80,7 +84,7 @@ public class FederatedNodeChangeDomain extends NodeChangeDomain {
         ((FederatedNodeChangeInfo) info).getExistingNodeMap().put(element.getId(), node);
         super.processElementAdded(info, element);
 
-        node.setInitialCommit(element.getDocId());
+        node.setInitialCommit(element.getCommitId());
 
         CommitJson commitJson = info.getCommitJson();
         ElementVersion newObj = new ElementVersion()
@@ -93,7 +97,7 @@ public class FederatedNodeChangeDomain extends NodeChangeDomain {
     }
 
     @Override
-    public void processElementUpdated(NodeChangeInfo info, ElementJson element, ElementJson existing) {
+    public boolean processElementUpdated(NodeChangeInfo info, ElementJson element, ElementJson existing) {
         if(!(info instanceof FederatedNodeChangeInfo)) {
             throw new InternalErrorException("Unexpected NodeChangeInfo type in FederatedNodeChangeDomain");
         }
@@ -106,16 +110,19 @@ public class FederatedNodeChangeDomain extends NodeChangeDomain {
                 existing.setIsDeleted(Constants.TRUE);
             }
         } else {
-            return;
+            return false;
         }
 
-        super.processElementUpdated(info, element, existing);
+        if (!super.processElementUpdated(info, element, existing)) {
+            return false;
+        }
         ElementVersion newObj= new ElementVersion()
             .setPreviousDocId(previousDocId)
             .setDocId(element.getDocId())
             .setId(element.getId())
             .setType("Element");
         info.getCommitJson().getUpdated().add(newObj);
+        return true;
     }
 
     @Override
@@ -133,7 +140,7 @@ public class FederatedNodeChangeDomain extends NodeChangeDomain {
         String docId = UUID.randomUUID().toString();
         element.setDocId(docId);
 
-        super.processElementAddedOrUpdated(info, element);   
+        super.processElementAddedOrUpdated(info, element);
         n.setDocId(element.getDocId());
         n.setLastCommit(info.getCommitJson().getId());
         n.setDeleted(false);
@@ -148,10 +155,7 @@ public class FederatedNodeChangeDomain extends NodeChangeDomain {
             throw new InternalErrorException("Unexpected NodeChangeInfo type in FederatedNodeChangeDomain");
         }
         Node n = ((FederatedNodeChangeInfo) info).getExistingNodeMap().get(element.getId());
-        if(n != null) {
-            n.setNodeId(element.getId());
-            n.setInitialCommit(element.getDocId());
-        } else {
+        if (n == null) {
             return;
         }
 
@@ -183,8 +187,13 @@ public class FederatedNodeChangeDomain extends NodeChangeDomain {
             ElementJson indexElement = info.getExistingElementMap().get(nodeId);
 
             if (node.isDeleted()) {
-                info.addRejection(nodeId, new Rejection(indexElement, 410, "Already deleted"));  
+                info.addRejection(nodeId, new Rejection(indexElement, 410, "Already deleted"));
                 continue;
+            }
+            if (indexElement == null) {
+                logger.warn("node db and index mismatch on element delete: nodeId: " + nodeId +
+                    ", docId not found: " + federatedInfo.getExistingNodeMap().get(nodeId).getDocId());
+                indexElement = new ElementJson().setId(nodeId).setDocId(node.getDocId());
             }
 
             ElementJson request = info.getReqElementMap().get(nodeId);
@@ -227,8 +236,12 @@ public class FederatedNodeChangeDomain extends NodeChangeDomain {
                 added = true;
             } else if (indexElement == null) {
                 logger.warn("node db and index mismatch on element update: nodeId: " + n.getNodeId() + ", docId not found: " + n.getDocId());
-                info.addRejection(element.getId(), new Rejection(element, 500, "Update failed: previous element not found"));
-                continue;
+                indexElement = new ElementJson().setId(n.getNodeId()).setDocId(n.getDocId());
+                Optional<Commit> init = commitDAO.findByCommitId(n.getInitialCommit());
+                if (init.isPresent()) {
+                    indexElement.setCreator(init.get().getCreator());
+                    indexElement.setCreated(Formats.FORMATTER.format(init.get().getTimestamp()));
+                }
             }
 
             // create new doc id for all element json, update modified time, modifier (use dummy for now), set _projectId, _refId, _inRefIds
@@ -241,41 +254,42 @@ public class FederatedNodeChangeDomain extends NodeChangeDomain {
         return federatedInfo;
     }
 
-    @Override
-    public void addExistingElements(NodeChangeInfo nodeChangeInfo, List<ElementJson> existingElements) {
-        getDomain.addExistingElements(nodeChangeInfo, existingElements);
-    }
 
-    //ToDo :: Check
     @Override
 	public void primeNodeChangeInfo(NodeChangeInfo nodeChangeInfo, Collection<ElementJson> transactedElements) {
         Set<String> elementIds = transactedElements.stream().map(BaseJson::getId).filter(id->null!=id).collect(Collectors.toSet());
         List<Node> existingNodes = nodeRepository.findAllByNodeIds(elementIds);
 
-        Set<String> indexIds = new HashSet<>();
-        Map<String, Node> existingNodeMap = new HashMap<>();
-        Map<String, ElementJson> reqElementMap = new HashMap<>();
+        if (!(nodeChangeInfo instanceof FederatedNodeChangeInfo)) {
+            throw new InternalErrorException("Node processing is not using FederatedNodeChangeInfo");
+        }
+
+        FederatedNodeChangeInfo info = (FederatedNodeChangeInfo)nodeChangeInfo;
+        Set<String> indexIds = Optional.ofNullable(info.getReqIndexIds()).orElse(new HashSet<>());
+        Map<String, Node> existingNodeMap = Optional.ofNullable(info.getExistingNodeMap()).orElse(new HashMap<>());
+        Map<String, ElementJson> reqElementMap = new HashMap<>(); // don't add to any existing since this change processing is only for transactedElements
+        Map<String, ElementJson> existingElementMap = Optional.ofNullable(info.getExistingElementMap()).orElse(new HashMap<>());
+
+        Set<String> transactedIndexIds = new HashSet<>();
         for (Node node : existingNodes) {
+            transactedIndexIds.add(node.getDocId());
             indexIds.add(node.getDocId());
             existingNodeMap.put(node.getNodeId(), node);
-            // reqElementMap.put(node.getNodeId(), new ElementJson().setId(node.getNodeId()));
         }
-        if(!transactedElements.isEmpty()){
-            reqElementMap.putAll(convertJsonToMap(transactedElements.parallelStream().collect(Collectors.toList())));
+        if (!transactedElements.isEmpty()) {
+            reqElementMap.putAll(convertJsonToMap(transactedElements));
         }
 
         // bulk read existing elements in elastic
-        List<ElementJson> existingElements = nodeIndex.findAllById(indexIds);
-        Map<String, ElementJson> existingElementMap = convertJsonToMap(existingElements);
+        List<ElementJson> existingElements = nodeIndex.findAllById(transactedIndexIds);
+        existingElementMap.putAll(convertJsonToMap(existingElements));
 
-        if (nodeChangeInfo instanceof FederatedNodeChangeInfo) {
-            ((FederatedNodeChangeInfo) nodeChangeInfo).setExistingElementMap(existingElementMap);
-            ((FederatedNodeChangeInfo) nodeChangeInfo).setExistingNodeMap(existingNodeMap);
-            ((FederatedNodeChangeInfo) nodeChangeInfo).setReqElementMap(reqElementMap);
-            ((FederatedNodeChangeInfo) nodeChangeInfo).setReqIndexIds(indexIds);
-            ((FederatedNodeChangeInfo) nodeChangeInfo).setRejected(new HashMap<>());
-            ((FederatedNodeChangeInfo) nodeChangeInfo).setActiveElementMap(new HashMap<>());
-        }
+        info.setExistingElementMap(existingElementMap);
+        info.setReqElementMap(reqElementMap);
+        info.setRejected(Optional.ofNullable(info.getRejected()).orElse(new HashMap<>()));
+        info.setActiveElementMap(Optional.ofNullable(info.getActiveElementMap()).orElse(new HashMap<>()));
+        info.setExistingNodeMap(existingNodeMap);
+        info.setReqIndexIds(indexIds);
 	}
 
 }
