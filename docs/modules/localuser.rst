@@ -1,1 +1,1 @@
-.. include:: ../../localuser/README.rst
+.. include:: ../../localauth/README.rst

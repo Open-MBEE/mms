@@ -1,6 +1,9 @@
 package org.openmbee.mms.twc.utilities;
 
+import org.openmbee.mms.twc.TeamworkCloud;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.codec.Base64;
 import org.springframework.web.client.RestTemplate;
@@ -48,4 +51,27 @@ public class RestUtils {
     	         set( AUTHORIZATION, authHeader );
     	      }};
     	}
+
+    /**
+     * This method is used to establish connection twc Rest API's by calling
+     * Teamwork cloud endpoints Time being added Admin account .Later need to
+     * implement secure methods like CyberArk
+     *
+     * @param twcRestUrl
+     * @return
+     */
+    public ResponseEntity<String> getRestResponse(String twcRestUrl, TeamworkCloud twc) {
+        RestTemplate restTemplate = getRestTemplate();
+        HttpHeaders headers = basicAuthHeader(twc.getAdminUsername(), twc.getAdminPwd());
+        ResponseEntity<String> respEntity = null;
+
+        try {
+            HttpEntity<String> entityReq = new HttpEntity<>(null, headers);
+            respEntity = restTemplate.exchange(twcRestUrl, HttpMethod.GET, entityReq, String.class);
+
+        } catch (Exception Ex) {
+            return null;
+        }
+        return respEntity;
+    }
 }

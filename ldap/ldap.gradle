@@ -1,6 +1,6 @@
 dependencies {
     implementation project(':rdb')
-
+    implementation project(':users')
     implementation commonDependencies.'spring-security-ldap'
 }
 

@@ -38,7 +38,7 @@ public class PermissionUpdatesResponseBuilder {
         return this;
     }
 
-    public PermissionUpdatesResponse getPermissionUpdatesReponse() {
+    public PermissionUpdatesResponse getPermissionUpdatesResponse() {
         PermissionUpdatesResponse permissionUpdatesResponse = new PermissionUpdatesResponse();
         permissionUpdatesResponse.setInherit(this.inherit);
         permissionUpdatesResponse.setPublic(this.isPublic);

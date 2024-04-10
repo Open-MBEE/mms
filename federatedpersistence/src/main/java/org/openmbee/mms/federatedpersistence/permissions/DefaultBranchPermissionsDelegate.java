@@ -432,6 +432,6 @@ public class DefaultBranchPermissionsDelegate extends AbstractDefaultPermissions
         branchGroupPermRepo.saveAll(groupPermissions.getAll());
         responseBuilder.getGroups().insertPermissionUpdates_BranchGroupPerm(PermissionUpdateResponse.Action.ADD, groupPermissions.getAll());
 
-        return responseBuilder.getPermissionUpdatesReponse();
+        return responseBuilder.getPermissionUpdatesResponse();
     }
 }

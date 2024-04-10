@@ -14,6 +14,8 @@ public interface PermissionService {
 
     void initBranchPerms(String projectId, String branchId, boolean inherit, String creator);
 
+    void initGroupPerms(String groupName, String creator);
+
     PermissionUpdatesResponse updateOrgUserPerms(PermissionUpdateRequest req, String orgId);
 
     PermissionUpdatesResponse updateOrgGroupPerms(PermissionUpdateRequest req, String orgId);
@@ -26,6 +28,10 @@ public interface PermissionService {
 
     PermissionUpdateResponse updateBranchGroupPerms(PermissionUpdateRequest req, String projectId, String branchId);
 
+    PermissionUpdatesResponse updateGroupUserPerms(PermissionUpdateRequest req, String groupName);
+
+    PermissionUpdatesResponse updateGroupGroupPerms(PermissionUpdateRequest req, String groupName);
+
     PermissionUpdatesResponse setProjectInherit(boolean isInherit, String projectId);
 
     PermissionUpdatesResponse setBranchInherit(boolean isInherit, String projectId, String branchId);
@@ -34,11 +40,15 @@ public interface PermissionService {
 
     boolean setProjectPublic(boolean isPublic, String projectId);
 
+    boolean setGroupPublic(boolean isPublic, String groupName);
+
     boolean hasOrgPrivilege(String privilege, String user, Set<String> groups, String orgId);
 
     boolean hasProjectPrivilege(String privilege, String user, Set<String> groups, String projectId);
 
     boolean hasBranchPrivilege(String privilege, String user, Set<String> groups, String projectId, String branchId);
+
+    boolean hasGroupPrivilege(String privilege, String user, Set<String> groups, String groupName);
 
     boolean isProjectInherit(String projectId);
 
@@ -47,6 +57,8 @@ public interface PermissionService {
     boolean isOrgPublic(String orgId);
 
     boolean isProjectPublic(String projectId);
+
+    boolean isGroupPublic(String groupName);
 
     PermissionResponse getOrgGroupRoles(String orgId);
 
@@ -59,4 +71,8 @@ public interface PermissionService {
     PermissionResponse getBranchGroupRoles(String projectId, String branchId);
 
     PermissionResponse getBranchUserRoles(String projectId, String branchId);
+
+    PermissionResponse getGroupGroupRoles(String groupName);
+
+    PermissionResponse getGroupUserRoles(String groupName);
 }

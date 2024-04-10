@@ -8,6 +8,7 @@ import org.openmbee.mms.core.config.Constants;
 import org.openmbee.mms.core.dao.BranchPersistence;
 import org.openmbee.mms.core.dao.OrgPersistence;
 import org.openmbee.mms.core.dao.ProjectPersistence;
+import org.openmbee.mms.core.dao.GroupPersistence;
 import org.openmbee.mms.core.delegation.PermissionsDelegate;
 import org.openmbee.mms.core.exceptions.InternalErrorException;
 import org.openmbee.mms.core.exceptions.NotFoundException;
@@ -16,6 +17,7 @@ import org.openmbee.mms.core.objects.PermissionUpdateRequest;
 import org.openmbee.mms.core.objects.PermissionUpdateResponse;
 import org.openmbee.mms.core.objects.PermissionUpdatesResponse;
 import org.openmbee.mms.core.utils.PermissionsDelegateUtil;
+import org.openmbee.mms.json.GroupJson;
 import org.openmbee.mms.json.OrgJson;
 import org.openmbee.mms.json.ProjectJson;
 import org.openmbee.mms.json.RefJson;
@@ -33,6 +35,8 @@ public class DefaultPermissionService implements PermissionService {
     private BranchPersistence branchPersistence;
     private ProjectPersistence projectPersistence;
     private OrgPersistence orgPersistence;
+    private GroupPersistence groupPersistence;
+
     private PermissionsDelegateUtil permissionsDelegateUtil;
 
     @Autowired
@@ -53,6 +57,11 @@ public class DefaultPermissionService implements PermissionService {
     @Autowired
     public void setOrgPersistence(OrgPersistence orgPersistence) {
         this.orgPersistence = orgPersistence;
+    }
+
+    @Autowired
+    public void setGroupPersistence(GroupPersistence groupPersistence) {
+        this.groupPersistence = groupPersistence;
     }
 
     @Override
@@ -86,6 +95,14 @@ public class DefaultPermissionService implements PermissionService {
     }
 
     @Override
+    @Transactional
+    public void initGroupPerms(String groupName, String creator) {
+        GroupJson group = getGroup(groupName);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(group);
+        permissionsDelegate.initializePermissions(creator);
+    }
+
+    @Override
     public PermissionUpdatesResponse updateOrgUserPerms(PermissionUpdateRequest req, String orgId) {
         OrgJson organization = getOrganization(orgId);
         PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(organization);
@@ -98,7 +115,7 @@ public class DefaultPermissionService implements PermissionService {
             responseBuilder.insert(recalculateInheritedPerms(project));
         }
 
-        return responseBuilder.getPermissionUpdatesReponse();
+        return responseBuilder.getPermissionUpdatesResponse();
     }
 
     @Override
@@ -113,7 +130,7 @@ public class DefaultPermissionService implements PermissionService {
             responseBuilder.insert(recalculateInheritedPerms(project));
         }
 
-        return responseBuilder.getPermissionUpdatesReponse();
+        return responseBuilder.getPermissionUpdatesResponse();
     }
 
     @Override
@@ -128,7 +145,7 @@ public class DefaultPermissionService implements PermissionService {
             responseBuilder.insert(recalculateInheritedPerms(b));
         }
 
-        return responseBuilder.getPermissionUpdatesReponse();
+        return responseBuilder.getPermissionUpdatesResponse();
     }
 
     @Override
@@ -143,7 +160,7 @@ public class DefaultPermissionService implements PermissionService {
             responseBuilder.insert(recalculateInheritedPerms(b));
         }
 
-        return responseBuilder.getPermissionUpdatesReponse();
+        return responseBuilder.getPermissionUpdatesResponse();
     }
 
     @Override
@@ -164,6 +181,26 @@ public class DefaultPermissionService implements PermissionService {
     }
 
     @Override
+    public PermissionUpdatesResponse updateGroupUserPerms(PermissionUpdateRequest req, String groupName) {
+        GroupJson group = getGroup(groupName);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(group);
+        PermissionUpdatesResponseBuilder responseBuilder = new PermissionUpdatesResponseBuilder();
+        responseBuilder.getUsers().insert(permissionsDelegate.updateUserPermissions(req));
+
+        return responseBuilder.getPermissionUpdatesResponse();
+    }
+
+    @Override
+    public PermissionUpdatesResponse updateGroupGroupPerms(PermissionUpdateRequest req, String groupName) {
+        GroupJson group = getGroup(groupName);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(group);
+        PermissionUpdatesResponseBuilder responseBuilder = new PermissionUpdatesResponseBuilder();
+        responseBuilder.getGroups().insert(permissionsDelegate.updateGroupPermissions(req));
+
+        return responseBuilder.getPermissionUpdatesResponse();
+    }
+
+    @Override
     public PermissionUpdatesResponse setProjectInherit(boolean isInherit, String projectId) {
         PermissionUpdatesResponseBuilder responseBuilder = new PermissionUpdatesResponseBuilder();
         responseBuilder.setInherit(isInherit);
@@ -172,7 +209,7 @@ public class DefaultPermissionService implements PermissionService {
         if (permissionsDelegate.setInherit(isInherit)) {
             responseBuilder.insert(recalculateInheritedPerms(project));
         }
-        return responseBuilder.getPermissionUpdatesReponse();
+        return responseBuilder.getPermissionUpdatesResponse();
     }
 
     @Override
@@ -184,7 +221,7 @@ public class DefaultPermissionService implements PermissionService {
         if (permissionsDelegate.setInherit(isInherit)) {
             responseBuilder.insert(recalculateInheritedPerms(branch));
         }
-        return responseBuilder.getPermissionUpdatesReponse();
+        return responseBuilder.getPermissionUpdatesResponse();
     }
 
     @Override
@@ -199,6 +236,15 @@ public class DefaultPermissionService implements PermissionService {
     public boolean setProjectPublic(boolean isPublic, String projectId) {
         ProjectJson project = getProject(projectId);
         PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(project);
+        permissionsDelegate.setPublic(isPublic);
+        return true;
+    }
+
+    @Override
+    @Transactional
+    public boolean setGroupPublic(boolean isPublic, String groupName) {
+        GroupJson group = getGroup(groupName);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(group);
         permissionsDelegate.setPublic(isPublic);
         return true;
     }
@@ -231,6 +277,17 @@ public class DefaultPermissionService implements PermissionService {
     }
 
     @Override
+    public boolean hasGroupPrivilege(String privilege, String user, Set<String> groups, String groupName) {
+        //Return true, however admin are only allowed "delete" perms on Remote group types
+        if (groups.contains(AuthorizationConstants.MMSADMIN)) return true;
+
+        GroupJson group = getGroup(groupName);
+
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(group);
+        return permissionsDelegate.hasPermission(user, groups, privilege);
+    }
+
+    @Override
     public boolean isProjectInherit(String projectId) {
         return projectPersistence.inheritsPermissions(projectId);
     }
@@ -248,6 +305,11 @@ public class DefaultPermissionService implements PermissionService {
     @Override
     public boolean isProjectPublic(String projectId) {
         return projectPersistence.hasPublicPermissions(projectId);
+    }
+
+    @Override
+    public boolean isGroupPublic(String groupName) {
+        return groupPersistence.hasPublicPermissions(groupName);
     }
 
     @Override
@@ -302,6 +364,23 @@ public class DefaultPermissionService implements PermissionService {
         return permissionsDelegate.getUserRoles();
     }
 
+    @Override
+    @Transactional
+    public PermissionResponse getGroupGroupRoles(String groupName) {
+        GroupJson group = getGroup(groupName);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(group);
+        return permissionsDelegate.getGroupRoles();
+    }
+
+    @Override
+    @Transactional
+    public PermissionResponse getGroupUserRoles(String groupName) {
+        GroupJson group = getGroup(groupName);
+        PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(group);
+        return permissionsDelegate.getUserRoles();
+    }
+    
+
     private PermissionUpdatesResponse recalculateInheritedPerms(ProjectJson project) {
 
         PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(project);
@@ -312,8 +391,7 @@ public class DefaultPermissionService implements PermissionService {
         for (RefJson branch : branches) {
             responseBuilder.insert(recalculateInheritedPerms(branch));
         }
-
-        return responseBuilder.getPermissionUpdatesReponse();
+        return responseBuilder.getPermissionUpdatesResponse();
     }
 
     private PermissionUpdatesResponse recalculateInheritedPerms(RefJson branch) {
@@ -338,6 +416,15 @@ public class DefaultPermissionService implements PermissionService {
             throw new NotFoundException("Project " + projectId + " not found");
         }
         return proj.get();
+    }
+
+    private GroupJson getGroup(String groupName) {
+        Optional<GroupJson> group = groupPersistence.findByName(groupName);
+
+        if (!group.isPresent()) {
+            throw new NotFoundException("Group " + groupName + " not found");
+        }
+        return group.get();
     }
 
     private enum BRANCH_NOTFOUND_BEHAVIOR {THROW, CREATE, IGNORE}

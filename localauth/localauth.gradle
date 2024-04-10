@@ -1,0 +1,4 @@
+dependencies {
+    implementation project(':rdb')
+    implementation project(':users')
+}
