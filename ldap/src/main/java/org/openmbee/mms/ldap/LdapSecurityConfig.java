@@ -4,13 +4,8 @@ import org.openmbee.mms.core.config.AuthorizationConstants;
 import org.openmbee.mms.core.dao.GroupPersistence;
 import org.openmbee.mms.core.dao.UserGroupsPersistence;
 import org.openmbee.mms.core.dao.UserPersistence;
-import org.openmbee.mms.core.exceptions.ForbiddenException;
 import org.openmbee.mms.json.GroupJson;
 import org.openmbee.mms.json.UserJson;
-import org.openmbee.mms.ldap.security.LdapUsersDetailsService;
-import org.openmbee.mms.users.security.AbstractUsersDetailsService;
-import org.openmbee.mms.users.security.UsersDetails;
-import org.openmbee.mms.users.security.UsersDetailsService;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -34,7 +29,6 @@ import org.springframework.security.config.annotation.authentication.configurers
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.ldap.SpringSecurityLdapTemplate;
 import org.springframework.security.ldap.authentication.ad.ActiveDirectoryLdapAuthenticationProvider;
 import org.springframework.security.ldap.userdetails.LdapAuthoritiesPopulator;
