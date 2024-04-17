@@ -1,6 +1,5 @@
 package org.openmbee.mms.federatedpersistence.permissions;
 
-import org.openmbee.mms.core.builders.PermissionUpdateResponseBuilder;
 import org.openmbee.mms.core.builders.PermissionUpdatesResponseBuilder;
 import org.openmbee.mms.core.config.AuthorizationConstants;
 import org.openmbee.mms.core.objects.PermissionResponse;
@@ -23,8 +22,6 @@ import org.springframework.http.HttpStatus;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
-
-import static org.openmbee.mms.core.config.AuthorizationConstants.EVERYONE;
 
 public class DefaultGroupPermissionsDelegate extends AbstractDefaultPermissionsDelegate {
 
@@ -89,7 +86,7 @@ public class DefaultGroupPermissionsDelegate extends AbstractDefaultPermissionsD
             throw new IllegalArgumentException("Cannot inherit permissions for a Group");
         }
 
-        Optional<User> user = getUserRepo().findByUsername(creator);
+        Optional<User> user = getUserRepo().findByUsernameIgnoreCase(creator);
         Optional<Role> role = getRoleRepo().findByName(AuthorizationConstants.ADMIN);
 
         if (user.isEmpty()) {
@@ -117,9 +114,15 @@ public class DefaultGroupPermissionsDelegate extends AbstractDefaultPermissionsD
     @Override
     public boolean setInherit(boolean isInherit) {
         if(isInherit) {
-            throw new IllegalArgumentException("Cannot inherit permissions for a Group");
+            throw new IllegalArgumentException("Cannot inherit permissions for an Org");
         }
         return false;
+    }
+
+    @Override
+    public PermissionResponse getInherit() {
+        //Orgs will not inherit
+        return PermissionResponse.getDefaultResponse();
     }
 
     @Override
@@ -130,12 +133,12 @@ public class DefaultGroupPermissionsDelegate extends AbstractDefaultPermissionsD
 
     @Override
     public PermissionUpdateResponse updateUserPermissions(PermissionUpdateRequest req) {
-        PermissionUpdateResponseBuilder responseBuilder = new PermissionUpdateResponseBuilder();
+        FederatedPermissionsUpdateResponseBuilder responseBuilder = new FederatedPermissionsUpdateResponseBuilder();
 
         switch(req.getAction()) {
             case MODIFY:
                 for (PermissionUpdateRequest.Permission p: req.getPermissions()) {
-                    Optional<User> user = getUserRepo().findByUsername(p.getName());
+                    Optional<User> user = getUserRepo().findByUsernameIgnoreCase(p.getName());
                     Optional<Role> role = getRoleRepo().findByName(p.getRole());
                     if (user.isEmpty() || role.isEmpty()) {
                         //throw exception or skip
@@ -165,7 +168,7 @@ public class DefaultGroupPermissionsDelegate extends AbstractDefaultPermissionsD
                 groupUserPermRepo.deleteByGroup(group);
 
                 for (PermissionUpdateRequest.Permission p: req.getPermissions()) {
-                    Optional<User> user = getUserRepo().findByUsername(p.getName());
+                    Optional<User> user = getUserRepo().findByUsernameIgnoreCase(p.getName());
                     Optional<Role> role = getRoleRepo().findByName(p.getRole());
                     if (!user.isPresent() || !role.isPresent()) {
                         //throw exception or skip
@@ -179,7 +182,7 @@ public class DefaultGroupPermissionsDelegate extends AbstractDefaultPermissionsD
             case REMOVE:
                 Set<String> users = new HashSet<>();
                 req.getPermissions().forEach(p -> {
-                    Optional<User> user = getUserRepo().findByUsername(p.getName());
+                    Optional<User> user = getUserRepo().findByUsernameIgnoreCase(p.getName());
                     if(! user.isPresent()) {
                         //throw or skip;
                         return;
@@ -196,7 +199,8 @@ public class DefaultGroupPermissionsDelegate extends AbstractDefaultPermissionsD
 
     @Override
     public PermissionUpdateResponse updateGroupPermissions(PermissionUpdateRequest req) {
-        PermissionUpdateResponseBuilder responseBuilder = new PermissionUpdateResponseBuilder();
+        FederatedPermissionsUpdateResponseBuilder responseBuilder = new FederatedPermissionsUpdateResponseBuilder();
+
         switch(req.getAction()) {
             case MODIFY:
                 for (PermissionUpdateRequest.Permission p: req.getPermissions()) {

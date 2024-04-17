@@ -1,16 +1,11 @@
 package org.openmbee.mms.twc.utilities;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 import org.openmbee.mms.twc.TeamworkCloud;
 import org.openmbee.mms.twc.TeamworkCloudEndpoints;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.openmbee.mms.data.domains.global.Group;
-import org.openmbee.mms.data.domains.global.User;
 import org.springframework.http.ResponseEntity;
 
-import java.util.List;
-import java.util.Optional;
 
 public class AdminUtils {
     private RestUtils restUtils;

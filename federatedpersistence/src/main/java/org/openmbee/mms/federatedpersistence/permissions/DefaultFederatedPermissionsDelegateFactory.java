@@ -2,14 +2,17 @@ package org.openmbee.mms.federatedpersistence.permissions;
 
 import org.openmbee.mms.core.config.ContextHolder;
 import org.openmbee.mms.data.dao.BranchGDAO;
+import org.openmbee.mms.data.dao.GroupDAO;
 import org.openmbee.mms.data.dao.OrgDAO;
 import org.openmbee.mms.data.dao.ProjectDAO;
 import org.openmbee.mms.core.delegation.PermissionsDelegate;
 import org.openmbee.mms.core.delegation.PermissionsDelegateFactory;
 import org.openmbee.mms.core.exceptions.NotFoundException;
 import org.openmbee.mms.data.domains.global.Branch;
+import org.openmbee.mms.data.domains.global.Group;
 import org.openmbee.mms.data.domains.global.Organization;
 import org.openmbee.mms.data.domains.global.Project;
+import org.openmbee.mms.json.GroupJson;
 import org.openmbee.mms.json.OrgJson;
 import org.openmbee.mms.json.ProjectJson;
 import org.openmbee.mms.json.RefJson;
@@ -24,6 +27,7 @@ public class DefaultFederatedPermissionsDelegateFactory implements PermissionsDe
     private ProjectDAO projectDAO;
     private BranchGDAO branchDAO;
     private OrgDAO orgDAO;
+    private GroupDAO groupDAO;
 
     @Autowired
     public void setApplicationContext(ApplicationContext applicationContext) {
@@ -43,6 +47,11 @@ public class DefaultFederatedPermissionsDelegateFactory implements PermissionsDe
     @Autowired
     public void setOrgDAO(OrgDAO orgDAO) {
         this.orgDAO = orgDAO;
+    }
+
+    @Autowired
+    public void setGroupDAO(GroupDAO groupDAO) {
+        this.groupDAO = groupDAO;
     }
 
     @Override
@@ -73,5 +82,15 @@ public class DefaultFederatedPermissionsDelegateFactory implements PermissionsDe
             throw new NotFoundException("branch not found");
         }
         return applicationContext.getBean(DefaultBranchPermissionsDelegate.class, branchOptional.get());
+    }
+
+    @Override
+    public PermissionsDelegate getPermissionsDelegate(GroupJson group) {
+        ContextHolder.setContext(null);
+        Optional<Group> groupOptional = groupDAO.findByGroupName(group.getName());
+        if(groupOptional.isEmpty()) {
+            throw new NotFoundException("group not found");
+        }
+        return applicationContext.getBean(DefaultBranchPermissionsDelegate.class, groupOptional.get());
     }
 }
