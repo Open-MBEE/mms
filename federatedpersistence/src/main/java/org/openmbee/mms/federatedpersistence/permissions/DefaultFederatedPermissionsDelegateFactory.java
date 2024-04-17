@@ -2,7 +2,6 @@ package org.openmbee.mms.federatedpersistence.permissions;
 
 import org.openmbee.mms.core.config.ContextHolder;
 import org.openmbee.mms.data.dao.BranchGDAO;
-import org.openmbee.mms.data.dao.GroupDAO;
 import org.openmbee.mms.data.dao.OrgDAO;
 import org.openmbee.mms.data.dao.ProjectDAO;
 import org.openmbee.mms.core.delegation.PermissionsDelegate;
@@ -16,6 +15,7 @@ import org.openmbee.mms.json.GroupJson;
 import org.openmbee.mms.json.OrgJson;
 import org.openmbee.mms.json.ProjectJson;
 import org.openmbee.mms.json.RefJson;
+import org.openmbee.mms.rdb.repositories.GroupRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 
@@ -27,7 +27,7 @@ public class DefaultFederatedPermissionsDelegateFactory implements PermissionsDe
     private ProjectDAO projectDAO;
     private BranchGDAO branchDAO;
     private OrgDAO orgDAO;
-    private GroupDAO groupDAO;
+    private GroupRepository groupRepository;
 
     @Autowired
     public void setApplicationContext(ApplicationContext applicationContext) {
@@ -50,8 +50,8 @@ public class DefaultFederatedPermissionsDelegateFactory implements PermissionsDe
     }
 
     @Autowired
-    public void setGroupDAO(GroupDAO groupDAO) {
-        this.groupDAO = groupDAO;
+    public void setGroupRepository(GroupRepository groupRepository) {
+        this.groupRepository = groupRepository;
     }
 
     @Override
@@ -87,7 +87,7 @@ public class DefaultFederatedPermissionsDelegateFactory implements PermissionsDe
     @Override
     public PermissionsDelegate getPermissionsDelegate(GroupJson group) {
         ContextHolder.setContext(null);
-        Optional<Group> groupOptional = groupDAO.findByGroupName(group.getName());
+        Optional<Group> groupOptional = groupRepository.findByName(group.getName());
         if(groupOptional.isEmpty()) {
             throw new NotFoundException("group not found");
         }
