@@ -1,4 +1,4 @@
-package org.openmbee.mms.ldap.config;
+package org.openmbee.mms.ldap;
 
 import org.springframework.context.annotation.Condition;
 import org.springframework.context.annotation.ConditionContext;

@@ -1,8 +1,9 @@
-package org.openmbee.mms.ldap.config;
+package org.openmbee.mms.ldap;
 
 import org.openmbee.mms.core.config.AuthorizationConstants;
 import org.openmbee.mms.core.dao.GroupPersistence;
 import org.openmbee.mms.core.dao.UserGroupsPersistence;
+import org.openmbee.mms.core.dao.UserPersistence;
 import org.openmbee.mms.core.exceptions.ForbiddenException;
 import org.openmbee.mms.json.GroupJson;
 import org.openmbee.mms.json.UserJson;
@@ -48,31 +49,6 @@ public class LdapSecurityConfig {
 
     private static Logger logger = LoggerFactory.getLogger(LdapSecurityConfig.class);
 
-    private LdapUsersDetailsService userDetailsService;
-
-    private GroupPersistence groupPersistence;
-
-    private UserGroupsPersistence userGroupsPersistence;
-
-    @Autowired
-    public void setGroupPersistence(GroupPersistence groupPersistence) {
-        this.groupPersistence = groupPersistence;
-    }
-
-    @Autowired
-    public void setUserGroupsPersistence(UserGroupsPersistence userGroupsPersistence) {
-        this.userGroupsPersistence = userGroupsPersistence;
-    }
-
-
-    @Autowired
-    public void setUserDetailsService(LdapUsersDetailsService userDetailsService) {
-        this.userDetailsService = userDetailsService;
-    }
-
-    
-
-
     @Value("${ldap.ad.enabled:false}")
     private Boolean adEnabled;
 
@@ -94,6 +70,21 @@ public class LdapSecurityConfig {
     @Value("#{'${ldap.user.dn.pattern:uid={0}}'.split(';')}")
     private List<String> userDnPattern;
 
+    @Value("${ldap.user.attributes.username:uid}")
+    private String userAttributesUsername;
+
+    @Value("${ldap.user.attributes.firstname:givenname}")
+    private String userAttributesFirstName;
+
+    @Value("${ldap.user.attributes.lastname:sn}")
+    private String userAttributesLastName;
+
+    @Value("${ldap.user.attributes.email:mail}")
+    private String userAttributesEmail;
+
+    @Value("${ldap.user.attributes.update:24}")
+    private int userAttributesUpdate;
+
     @Value("${ldap.group.search.base:#{''}}")
     private String groupSearchBase;
 
@@ -108,6 +99,24 @@ public class LdapSecurityConfig {
 
     @Value("${ldap.user.search.filter:(uid={0})}")
     private String userSearchFilter;
+    private UserPersistence userPersistence;
+    private GroupPersistence groupPersistence;
+    private UserGroupsPersistence userGroupsPersistence;
+
+    @Autowired
+    public void setUserPersistence(UserPersistence userPersistence) {
+        this.userPersistence = userPersistence;
+    }
+
+    @Autowired
+    public void setGroupPersistence(GroupPersistence groupPersistence) {
+        this.groupPersistence = groupPersistence;
+    }
+
+    @Autowired
+    public void setUserGroupsPersistence(UserGroupsPersistence userGroupsPersistence) {
+        this.userGroupsPersistence = userGroupsPersistence;
+    }
 
     @Autowired
     public void configureLdapAuth(AuthenticationManagerBuilder auth,
@@ -157,16 +166,20 @@ public class LdapSecurityConfig {
             public Collection<? extends GrantedAuthority> getGrantedAuthorities(
                 DirContextOperations userData, String username) {
                 logger.debug("Populating authorities using LDAP");
-                UserJson user = new UserJson();
-                try {
-                    UsersDetails userDetails = userDetailsService.loadUserByUsername(username);
-                    user = userDetails.getUser();
-                } catch (UsernameNotFoundException e) {
+                Optional<UserJson> userOptional = userPersistence.findByUsername(username);
+
+                if (userOptional.isEmpty()) {
                     logger.info("No user record for {} in the userRepository, creating...", userData.getDn());
-                    user = userDetailsService.register(userData);
+                    UserJson newUser = createLdapUser(userData);
+                    userOptional = Optional.of(newUser);
                 }
 
-                user = userDetailsService.update(userData, user);
+                UserJson user = userOptional.get();
+                if (user.getModified() != null && Instant.parse(user.getModified()).isBefore(Instant.now().minus(userAttributesUpdate, ChronoUnit.HOURS))) {
+                    saveLdapUser(userData, user);
+                }
+                user.setPassword(null);
+
                 StringBuilder userDnBuilder = new StringBuilder();
                 userDnBuilder.append(userData.getDn().toString());
                 if (providerBase != null && !providerBase.isEmpty()) {
@@ -187,18 +200,21 @@ public class LdapSecurityConfig {
                 andFilter.and(groupsFilter);
                 andFilter.and(orFilter);
 
-                        String filter = andFilter.encode();
-                        logger.debug("Searching LDAP with filter: {}", filter);
+                String filter = andFilter.encode();
+                logger.debug("Searching LDAP with filter: {}", filter);
+
                 Set<String> memberGroups = ldapTemplate
                     .searchForSingleAttributeValues(groupSearchBase, filter, new Object[]{""}, groupRoleAttribute);
                 logger.debug("LDAP search result: {}", Arrays.toString(memberGroups.toArray()));
+
+                userPersistence.save(user);
                 //Add groups to user
 
                 Set<GroupJson> addGroups = new HashSet<>();
                 
                 for (String memberGroup : memberGroups) {
                     Optional<GroupJson> group = groupPersistence.findByName(memberGroup);
-                    group.ifPresent(g -> userGroupsPersistence.addUserToGroup(g.getName(), username));
+                    group.ifPresent(g -> userGroupsPersistence.addUserToGroup(g.getName(), user.getUsername()));
                     group.ifPresent(addGroups::add);
                 }
 
@@ -261,7 +277,33 @@ public class LdapSecurityConfig {
         return contextSource;
     }
 
-    
+    private UserJson saveLdapUser(DirContextOperations userData, UserJson saveUser) {
+        if (saveUser.getEmail() == null ||
+            !saveUser.getEmail().equals(userData.getStringAttribute(userAttributesEmail))
+        ) {
+            saveUser.setEmail(userData.getStringAttribute(userAttributesEmail));
+        }
+        if (saveUser.getFirstName() == null ||
+            !saveUser.getFirstName().equals(userData.getStringAttribute(userAttributesFirstName))
+        ) {
+            saveUser.setFirstName(userData.getStringAttribute(userAttributesFirstName));
+        }
+        if (saveUser.getLastName() == null ||
+            !saveUser.getLastName().equals(userData.getStringAttribute(userAttributesLastName))
+        ) {
+            saveUser.setLastName(userData.getStringAttribute(userAttributesLastName));
+        }
 
-    
+        return saveUser;
+    }
+
+    private UserJson createLdapUser(DirContextOperations userData) {
+        String username = userData.getStringAttribute(userAttributesUsername);
+        logger.debug("Creating user for {} using LDAP", username);
+        UserJson user = saveLdapUser(userData, new UserJson());
+        user.setUsername(username);
+        user.setEnabled(true);
+        user.setAdmin(false);
+        return userPersistence.save(user);
+    }
 }
