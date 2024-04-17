@@ -12,7 +12,6 @@ import org.openmbee.mms.users.objects.UserCreateRequest;
 import org.openmbee.mms.users.security.AbstractUsersDetailsService;
 import org.openmbee.mms.users.security.DefaultUsersDetails;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
