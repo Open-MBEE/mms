@@ -23,7 +23,7 @@ public class FederatedPermissionUpdatesResponseBuilder extends PermissionUpdates
     }
 
     @Override
-    public PermissionUpdatesResponse getPermissionUpdatesReponse() {
+    public PermissionUpdatesResponse getPermissionUpdatesResponse() {
         PermissionUpdatesResponse permissionUpdatesResponse = new PermissionUpdatesResponse();
         permissionUpdatesResponse.setInherit(this.inherit);
         permissionUpdatesResponse.setPublic(this.isPublic);

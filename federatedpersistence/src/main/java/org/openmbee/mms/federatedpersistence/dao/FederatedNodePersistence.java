@@ -194,7 +194,7 @@ public class FederatedNodePersistence implements NodePersistence {
                         node.setDeleted(true);
                     }
                 }
-                nodeDAO.saveAll(info.getExistingNodeMap().values().stream().toList());
+                nodeDAO.saveAll(info.getExistingNodeMap().values().stream().collect(Collectors.toList()));
 
             } else {
                 for (Node n : nodeDAO.findAllByDeleted(false)) {

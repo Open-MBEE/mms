@@ -4,6 +4,7 @@
 application.properties
 localhost-env.json
 .vscode
+certs
 
 ### STS ###
 .apt_generated

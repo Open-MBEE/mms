@@ -183,6 +183,102 @@
 			},
 			"response": []
 		},
+        {
+            "name": "create remote group",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test(\"response has 1 group\", function () {",
+                            "    var jsonData = pm.response.json();",
+                            "    pm.expect(jsonData.groups.length).to.eql(1);",
+                            "    pm.expect(jsonData.groups[0]['name']).to.include('remotegroup')",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                    }
+                ],
+                "url": {
+                    "raw": "{{host}}/groups",
+                    "host": [
+                        "{{host}}"
+                    ],
+                    "path": [
+                        "groups"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n\t\"groups\": [\n\t]\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                }
+            },
+
+            "response": []
+        },
+        {
+            "name": "create groups",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test(\"response has 1 group\", function () {",
+                            "    var jsonData = pm.response.json();",
+                            "    pm.expect(jsonData.groups.length).to.eql(1);",
+                            "    pm.expect(jsonData.groups[0]['name']).to.include('localgroup')",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                    }
+                ],
+                "url": {
+                    "raw": "{{host}}/groups",
+                    "host": [
+                        "{{host}}"
+                    ],
+                    "path": [
+                        "groups"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n\t\"groups\": [\n\t\t{\n\t\t\t\"name\" : \"localgroup\",\n\t\t\t\"type\" : \"local\"\n\t\t},\n\t\t{\n\t\t\t\"name\" : \"remotegroup\",\n\t\t\t\"type\" : \"postman\"\n\t\t,\n\t\t\t\"public\" : false\n\t\t}\n\t]\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                }
+            },
+
+            "response": []
+        },
 		{
 			"name": "check anonymous is rejected for project permissions-aa",
 			"event": [
@@ -218,6 +314,41 @@
 			},
 			"response": []
 		},
+        {
+            "name": "check anonymous is rejected for group remotegroup",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "id": "1b237e80-4487-4562-ba7b-274f0ef94a21",
+                        "exec": [
+                            "pm.test(\"Status code is 401\", function () {",
+                            "    pm.response.to.have.status(401);",
+                            "});"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "auth": {
+                    "type": "noauth"
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{host}}/groups/remotegroup",
+                    "host": [
+                        "{{host}}"
+                    ],
+                    "path": [
+                        "projects",
+                        "permissions-aa"
+                    ]
+                }
+            },
+            "response": []
+        },
 		{
 			"name": "create reader user",
 			"event": [
@@ -248,12 +379,12 @@
 					"raw": "{\n\t\"username\": \"reader\",\n\t\"password\": \"reader\"\n}"
 				},
 				"url": {
-					"raw": "{{host}}/user",
+					"raw": "{{host}}/users",
 					"host": [
 						"{{host}}"
 					],
 					"path": [
-						"user"
+						"users"
 					]
 				}
 			},
@@ -302,12 +433,12 @@
 					"raw": "{\n\t\"username\": \"dummy\",\n\t\"password\": \"dummy\"\n}"
 				},
 				"url": {
-					"raw": "{{host}}/user",
+					"raw": "{{host}}/users",
 					"host": [
 						"{{host}}"
 					],
 					"path": [
-						"user"
+						"users"
 					]
 				}
 			},
@@ -343,12 +474,12 @@
 					"raw": "{\n\t\"username\": \"writer\",\n\t\"password\": \"writer\"\n}"
 				},
 				"url": {
-					"raw": "{{host}}/user",
+					"raw": "{{host}}/users",
 					"host": [
 						"{{host}}"
 					],
 					"path": [
-						"user"
+						"users"
 					]
 				}
 			},

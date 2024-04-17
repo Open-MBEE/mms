@@ -32,10 +32,10 @@ services:
     container_name: mms
     hostname: mms
     environment:
-        - "SPRING_PROFILES_ACTIVE=test"
+        - "SPRING_PROFILES_ACTIVE=local"
     depends_on:
         - postgres
         - elasticsearch
         - minio
-    ports: 
+    ports:
         - 8080:8080

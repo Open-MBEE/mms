@@ -51,6 +51,9 @@ public class PermissionsLookupController {
                     case BRANCH:
                         result = mss.hasBranchPrivilege(auth, lookup.getProjectId(), lookup.getRefId(), pri, anon);
                         break;
+                    case GROUP:
+                        result = mss.hasGroupPrivilege(auth, lookup.getGroupName(), pri, anon);
+                        break;
                     default:
                         result = false;
                 }

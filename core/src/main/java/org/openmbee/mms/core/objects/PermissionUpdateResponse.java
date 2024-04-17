@@ -29,10 +29,12 @@ public class PermissionUpdateResponse {
 
         private boolean inherited;
 
+        private String groupName;
+
         public PermissionUpdate() {}
 
         public PermissionUpdate(Action action, String name, String role, String orgId, String orgName,
-                                String projectId, String projectName, String branchId, boolean inherited) {
+                                String projectId, String projectName, String branchId, String groupName, boolean inherited) {
             this.action = action;
             this.name = name;
             this.role = role;
@@ -42,6 +44,7 @@ public class PermissionUpdateResponse {
             this.projectName = projectName;
             this.branchId = branchId;
             this.inherited = inherited;
+            this.groupName = groupName;
         }
 
         public Action getAction() {
@@ -117,6 +120,14 @@ public class PermissionUpdateResponse {
 
         public void setInherited(boolean inherited) {
             this.inherited = inherited;
+        }
+
+        public String getGroupName() {
+            return groupName;
+        }
+
+        public void setGroupName(String groupName) {
+            this.groupName = groupName;
         }
     }
 

@@ -18,5 +18,5 @@ References
 * `Overview of Spring Security <https://spring.io/guides/topicals/spring-security-architecture#_authentication_and_access_control>`_
 * `UserDetails <https://docs.spring.io/spring-security/site/docs/current/api/org/springframework/security/core/userdetails/UserDetails.html>`_
 * `Authentication <https://docs.spring.io/spring-security/site/docs/current/api/org/springframework/security/core/Authentication.html>`_
-* :ref:`localuser`
+* :ref:`localauth`
 * :ref:`ldap`

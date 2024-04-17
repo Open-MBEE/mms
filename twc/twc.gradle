@@ -1,5 +1,7 @@
 dependencies {
     implementation project(':crud')
+    implementation project(':users')
+    implementation project(':groups')
     
     
     //TODO: Why is elastic search a dependency?

@@ -3,33 +3,25 @@ package org.openmbee.mms.twc.security;
 import org.openmbee.mms.core.dao.UserGroupsPersistence;
 import org.openmbee.mms.core.dao.UserPersistence;
 import org.openmbee.mms.json.UserJson;
+import org.openmbee.mms.twc.config.TwcConfig;
+import org.openmbee.mms.twc.exceptions.TwcConfigurationException;
+import org.openmbee.mms.twc.utilities.AdminUtils;
+import org.openmbee.mms.users.security.AbstractUsersDetailsService;
+import org.openmbee.mms.users.security.DefaultUsersDetails;
+import org.openmbee.mms.users.security.UsersDetails;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
+import java.util.*;
 
 @Service
-public class TwcUserDetailsService implements UserDetailsService {
-
-    private UserPersistence userPersistence;
-    private UserGroupsPersistence userGroupsPersistence;
-
-    @Autowired
-    public void setUserPersistence(UserPersistence userPersistence) {
-        this.userPersistence = userPersistence;
-    }
-
-    @Autowired
-    public void setUserGroupsPersistence(UserGroupsPersistence userGroupsPersistence) {
-        this.userGroupsPersistence = userGroupsPersistence;
-    }
+public class TwcUserDetailsService extends AbstractUsersDetailsService<UserJson> {
 
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        Optional<UserJson> userOptional = userPersistence.findByUsername(username);
+    public UsersDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        Optional<UserJson> userOptional = getUserPersistence().findByUsername(username);
 
         UserJson user;
         if (userOptional.isEmpty()) {
@@ -37,7 +29,7 @@ public class TwcUserDetailsService implements UserDetailsService {
         } else {
             user = userOptional.get();
         }
-        return new TwcUserDetails(user, userGroupsPersistence.findGroupsAssignedToUser(username));
+        return new DefaultUsersDetails(user, getUserGroupsPersistence().findGroupsAssignedToUser(username));
     }
 
     public UserJson addUser(String username) {
@@ -45,7 +37,42 @@ public class TwcUserDetailsService implements UserDetailsService {
         user.setUsername(username);
         //TODO: fill in user details from TWC
         user.setEnabled(true);
-        return userPersistence.save(user);
+
+        return register(user);
     }
+
+    @Override
+    public UserJson register(UserJson user) {
+        return saveUser(user);
+    }
+
+    @Override
+    public void changeUserPassword(String username, String password, boolean asAdmin) {
+        throw new TwcConfigurationException(HttpStatus.BAD_REQUEST,
+            "Cannot Modify Password. Users for this server are controlled by Teamwork Cloud");
+    }
+
+    @Override
+    public UserJson update(UserJson userData, UserJson saveUser) {
+        if (saveUser.getEmail() == null ||
+            !saveUser.getEmail().equals(userData.getEmail())
+        ) {
+            saveUser.setEmail(userData.getEmail());
+        }
+        if (saveUser.getFirstName() == null ||
+            !saveUser.getFirstName().equals(userData.getFirstName())
+        ) {
+            saveUser.setFirstName(userData.getFirstName());
+        }
+        if (saveUser.getLastName() == null ||
+            !saveUser.getLastName().equals(userData.getLastName())
+        ) {
+            saveUser.setLastName(userData.getLastName());
+        }
+        
+        return saveUser(saveUser);
+    }
+
+    
 
 }

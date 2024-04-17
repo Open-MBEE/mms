@@ -1,19 +1,26 @@
 package org.openmbee.mms.groups.objects;
 
-import io.swagger.v3.oas.annotations.media.Schema;
 
+import org.openmbee.mms.core.objects.BaseResponse;
+
+import org.openmbee.mms.json.GroupJson;
+import java.util.ArrayList;
 import java.util.List;
 
-public class GroupsResponse {
+public class GroupsResponse extends BaseResponse<GroupsResponse> {
 
-    @Schema(required = true)
-    private List<String> groups;
+    private List<GroupJson> groups;
 
-    public List<String> getGroups() {
-        return groups;
+    public GroupsResponse() {
+        this.groups = new ArrayList<>();
     }
 
-    public void setGroups(List<String> groups) {
+    public List<GroupJson> getGroups() {
+        return this.groups;
+    }
+
+    public void setGroups(List<GroupJson> groups) {
         this.groups = groups;
     }
+
 }

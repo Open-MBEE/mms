@@ -6,6 +6,7 @@ import org.openmbee.mms.core.delegation.PermissionsDelegateFactory;
 import org.openmbee.mms.json.OrgJson;
 import org.openmbee.mms.json.ProjectJson;
 import org.openmbee.mms.json.RefJson;
+import org.openmbee.mms.json.GroupJson;
 import org.openmbee.mms.twc.TeamworkCloud;
 import org.openmbee.mms.core.exceptions.NotFoundException;
 import org.openmbee.mms.twc.config.TwcConfig;
@@ -87,6 +88,16 @@ public class TwcPermissionsDelegateFactory implements PermissionsDelegateFactory
             return autowire(new TwcBranchPermissionsDelegate(branch, twcProjectDetails.getTeamworkCloud(),
                 twcProjectDetails.getWorkspaceId(), twcProjectDetails.getResourceId()));
         }
+        return null;
+    }
+
+    @Override
+    public PermissionsDelegate getPermissionsDelegate(GroupJson group) {
+        if(!twcConfig.isUseAuthDelegation()) {
+            return null;
+        }
+
+        //Do nothing group permissions are handled by TWC
         return null;
     }
 
