@@ -60,6 +60,7 @@ public class FederatedBranchPersistence implements BranchPersistence {
         scopedBranch.setTimestamp(Formats.FORMATTER.parse(refJson.getCreated(), Instant::from));
         scopedBranch.setParentRefId(refJson.getParentRefId());
         scopedBranch.setDocId(refJson.getDocId());
+        scopedBranch.setDeleted(Boolean.parseBoolean(refJson.getIsDeleted()));
 
         //Setup global Branch object
         Optional<Project> project = projectDAO.findByProjectId(refJson.getProjectId());
