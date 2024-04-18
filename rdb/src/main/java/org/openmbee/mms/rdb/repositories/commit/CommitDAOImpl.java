@@ -157,7 +157,7 @@ public class CommitDAOImpl extends BaseDAOImpl implements CommitDAO {
             currentRef = ref.getParentRefId();
             currentCid = ref.getParentCommit();
 
-            if (currentRef == null || currentRef == Constants.MASTER_BRANCH) {
+            if (currentRef == null || currentRef.equals(Constants.MASTER_BRANCH)) {
                 break;
             }
             Optional<Branch> parent = branchRepository.findByBranchId(currentRef);
