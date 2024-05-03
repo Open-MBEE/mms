@@ -36,7 +36,10 @@ public class Organization extends Base {
     @JsonProperty("public")
     private boolean isPublic;
 
+    private boolean deleted;
+
     public Organization() {
+        this.deleted = false;
     }
 
     public String getOrganizationName() {
@@ -85,5 +88,13 @@ public class Organization extends Base {
 
     public void setPublic(boolean aPublic) {
         isPublic = aPublic;
+    }
+
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        this.deleted = deleted;
     }
 }

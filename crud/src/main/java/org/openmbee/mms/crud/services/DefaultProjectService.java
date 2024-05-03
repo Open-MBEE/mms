@@ -63,18 +63,18 @@ public class DefaultProjectService implements ProjectService {
         try {
             //TODO Transaction start
             ProjectJson savedProjectJson = projectPersistence.save(project);
-
+            savedProjectJson.setIsArchived("false");
             //create and save master branch. We're combining operations with the branch unifiedDAO.
             branchPersistence.save(createMasterRefJson(savedProjectJson));
             //TODO Transaction commit
-
+            
             eventPublisher.forEach(pub -> pub.publish(
                 EventObject.create(savedProjectJson.getId(), Constants.MASTER_BRANCH, "project_created", savedProjectJson)));
             return savedProjectJson;
         } catch (Exception e) {
             logger.error("Couldn't create project: {}", project.getProjectId(), e);
             //Need to clean up in case of partial creation
-            projectPersistence.hardDelete(project.getProjectId());
+            projectPersistence.deleteById(project.getProjectId());
             //TODO Transaction rollback (could include project delete in rollback)
         }
         throw new InternalErrorException("Could not create project");
@@ -112,7 +112,7 @@ public class DefaultProjectService implements ProjectService {
         branchJson.setCreated(project.getCreated());
         branchJson.setProjectId(project.getId());
         branchJson.setCreator(project.getCreator());
-        branchJson.setDeleted(false);
+        branchJson.setIsArchived("false");
         return branchJson;
     }
 }

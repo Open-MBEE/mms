@@ -42,6 +42,8 @@ public class User extends Base {
     @JoinTable(name = "users_groups", joinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id"), inverseJoinColumns = @JoinColumn(name = "group_id", referencedColumnName = "id"), uniqueConstraints=@UniqueConstraint(columnNames={"user_id","group_id"}))
     private Set<Group> groups;
 
+    private String type;
+
     public User() {
         this.groups = new HashSet<>();
     }
@@ -150,6 +152,14 @@ public class User extends Base {
 
     public void setAdmin(boolean admin) {
         this.admin = admin;
+    }
+
+    public String getType() {
+        return this.type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
     }
 
 }

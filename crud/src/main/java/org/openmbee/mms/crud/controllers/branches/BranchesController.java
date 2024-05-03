@@ -4,6 +4,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.Optional;
 import java.util.UUID;
+
+import org.openmbee.mms.core.config.Constants;
 import org.openmbee.mms.core.config.Privileges;
 import org.openmbee.mms.core.exceptions.BadRequestException;
 import org.openmbee.mms.core.exceptions.MMSException;
@@ -40,17 +42,19 @@ public class BranchesController extends BaseController {
     @PreAuthorize("@mss.hasProjectPrivilege(authentication, #projectId, 'PROJECT_READ', true)")
     public RefsResponse getAllRefs(
         @PathVariable String projectId,
+        @RequestParam(required = false, defaultValue = Constants.FALSE) boolean includeDeleted,
         Authentication auth) {
 
         getProjectType(projectId);
-
         RefsResponse res = branchService.getBranches(projectId);
+        List<RefJson> filtered = new ArrayList<>();
         if (!permissionService.isProjectPublic(projectId)) {
-            List<RefJson> filtered = new ArrayList<>();
             for (RefJson ref: res.getRefs()) {
                 try {
                     if (mss.hasBranchPrivilege(auth, projectId, ref.getId(),
-                        Privileges.BRANCH_READ.name(), false)) {
+                        Privileges.BRANCH_READ.name(), false)
+                        && (!ref.isDeleted() || includeDeleted))
+                        {
                         filtered.add(ref);
                     }
                 } catch (MMSException e) {
@@ -58,8 +62,16 @@ public class BranchesController extends BaseController {
                         projectId + ", refId=" + ref.getId(), e);
                 }
             }
-            res.setRefs(filtered);
+        } else if (!includeDeleted) {
+            for (RefJson ref: res.getRefs()) {
+                if (!ref.isDeleted()) {
+                    filtered.add(ref);
+                }
+            }
+        } else {
+            filtered = res.getRefs();
         }
+        res.setRefs(filtered);
         return res;
     }
 

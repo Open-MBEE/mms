@@ -38,6 +38,7 @@ public class ProjectElasticImpl extends BaseElasticDAOImpl<ProjectJson> implemen
         ProjectJson projectJson = newInstance();
         projectJson.setProjectId(projectId);
         projectJson.setType("default");
+        projectJson.setIsArchived("false");
         create(projectJson);
     }
 

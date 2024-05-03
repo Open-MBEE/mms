@@ -22,7 +22,7 @@ public class DefaultNodeUpdateFilter implements NodeUpdateFilter {
     @Override
     public boolean filterUpdate(NodeChangeInfo info, ElementJson updated, ElementJson existing) {
         if (!info.getOverwrite()) {
-            if (Constants.TRUE.equals(existing.getIsDeleted()) || isUpdated(updated, existing, info)) {
+            if (Constants.TRUE.equals(existing.getIsArchived()) || isUpdated(updated, existing, info)) {
                 return diffUpdateJson(updated, existing, info);
             } else {
                 return false;
@@ -61,7 +61,7 @@ public class DefaultNodeUpdateFilter implements NodeUpdateFilter {
             }
         }
         element.merge(existing);
-        element.remove(ElementJson.IS_DELETED);
+        element.remove(ElementJson.IS_ARCHIVED);
         return true;
     }
 

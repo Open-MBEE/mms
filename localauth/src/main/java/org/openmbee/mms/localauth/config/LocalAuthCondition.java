@@ -1,14 +1,15 @@
-package org.openmbee.mms.ldap;
+package org.openmbee.mms.localauth.config;
 
 import org.springframework.context.annotation.Condition;
 import org.springframework.context.annotation.ConditionContext;
 import org.springframework.core.env.Environment;
 import org.springframework.core.type.AnnotatedTypeMetadata;
 
-public class LdapCondition implements Condition {
+public class LocalAuthCondition implements Condition {
     @Override
     public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
         Environment env = context.getEnvironment();
-        return "true".equals(env.getProperty("ldap.enabled"));
+        String prop = env.getProperty("ldap.enabled");
+        return (prop == null || prop.equals("false"));
     }
 }
