@@ -60,6 +60,7 @@ public class FederatedBranchPersistence implements BranchPersistence {
         scopedBranch.setTimestamp(Formats.FORMATTER.parse(refJson.getCreated(), Instant::from));
         scopedBranch.setParentRefId(refJson.getParentRefId());
         scopedBranch.setDocId(refJson.getDocId());
+        scopedBranch.setDeleted(Boolean.parseBoolean(refJson.getIsArchived()));
 
         //Setup global Branch object
         Optional<Project> project = projectDAO.findByProjectId(refJson.getProjectId());
@@ -101,11 +102,14 @@ public class FederatedBranchPersistence implements BranchPersistence {
     @Override
     public RefJson update(RefJson refJson) {
         ContextHolder.setContext(refJson.getProjectId());
-        Optional<Branch> existing = branchDAO.findByBranchId(refJson.getId());
-        existing.get().setDeleted(refJson.isDeleted());
-        branchDAO.save(existing.get());
-        branchIndexDAO.update(refJson);
-        return refJson;
+        Optional<Branch> optionalExisting = branchDAO.findByBranchId(refJson.getId());
+        Branch existing = optionalExisting.get();
+        if (refJson.getIsArchived() != null) {
+            existing.setDeleted(Boolean.parseBoolean(refJson.getIsArchived()));
+        }
+        
+        branchDAO.save(existing);
+        return branchIndexDAO.update(refJson);
     }
 
     @Override
