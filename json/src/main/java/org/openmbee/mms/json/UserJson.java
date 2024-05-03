@@ -1,9 +1,12 @@
 package org.openmbee.mms.json;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import io.swagger.v3.oas.annotations.media.Schema;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-@JsonIgnoreProperties({BaseJson.COMMITID, BaseJson.REFID, BaseJson.PROJECTID, BaseJson.TYPE, BaseJson.IS_DELETED,
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.media.Schema.AccessMode;
+
+@JsonIgnoreProperties({BaseJson.COMMITID, BaseJson.REFID, BaseJson.PROJECTID, BaseJson.IS_ARCHIVED,
     BaseJson.NAME, BaseJson.ID, UserJson.PASSWORD, "empty"})
 @Schema(name = "User", requiredProperties = {UserJson.USERNAME})
 public class UserJson extends BaseJson<UserJson> {
@@ -15,6 +18,9 @@ public class UserJson extends BaseJson<UserJson> {
     public static final String EMAIL = "email";
     public static final String PASSWORD = "password";
     public static final String ENABLED = "enabled";
+    public static final String CREATED = "created";
+    public static final String MODIFIED = "modified";
+    public static final String DISTINGUSHED_NAME = "_distingushedName";
 
     public String getUsername() {
         return (String) get(USERNAME);
@@ -76,6 +82,22 @@ public class UserJson extends BaseJson<UserJson> {
 
     public UserJson setEnabled(Boolean enabled) {
         put(ENABLED, enabled);
+        return this;
+    }
+
+    @JsonProperty(MODIFIED)
+    @Schema(accessMode = AccessMode.READ_ONLY)
+    @Override
+    public String getModified() {
+        return (String) this.get(MODIFIED);
+    }
+
+    public String getDistingushedName() {
+        return (String) this.get(DISTINGUSHED_NAME); 
+    }
+
+    public UserJson setDistingushedName(String distingushedName) {
+        put(DISTINGUSHED_NAME, distingushedName);
         return this;
     }
 

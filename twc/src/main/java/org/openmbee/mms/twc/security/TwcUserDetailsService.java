@@ -6,7 +6,7 @@ import org.openmbee.mms.json.UserJson;
 import org.openmbee.mms.twc.config.TwcConfig;
 import org.openmbee.mms.twc.exceptions.TwcConfigurationException;
 import org.openmbee.mms.twc.utilities.AdminUtils;
-import org.openmbee.mms.users.security.AbstractUsersDetailsService;
+import org.openmbee.mms.users.security.DefaultUsersDetailsService;
 import org.openmbee.mms.users.security.DefaultUsersDetails;
 import org.openmbee.mms.users.security.UsersDetails;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,11 +17,11 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 
 @Service
-public class TwcUserDetailsService extends AbstractUsersDetailsService<UserJson> {
+public class TwcUserDetailsService extends DefaultUsersDetailsService {
 
     @Override
     public UsersDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        Optional<UserJson> userOptional = getUserPersistence().findByUsername(username);
+        Optional<UserJson> userOptional = userPersistence.findByUsername(username);
 
         UserJson user;
         if (userOptional.isEmpty()) {
@@ -29,7 +29,7 @@ public class TwcUserDetailsService extends AbstractUsersDetailsService<UserJson>
         } else {
             user = userOptional.get();
         }
-        return new DefaultUsersDetails(user, getUserGroupsPersistence().findGroupsAssignedToUser(username));
+        return new DefaultUsersDetails(user, userGroupsPersistence.findGroupsAssignedToUser(username));
     }
 
     public UserJson addUser(String username) {
@@ -41,7 +41,6 @@ public class TwcUserDetailsService extends AbstractUsersDetailsService<UserJson>
         return register(user);
     }
 
-    @Override
     public UserJson register(UserJson user) {
         return saveUser(user);
     }
@@ -52,7 +51,6 @@ public class TwcUserDetailsService extends AbstractUsersDetailsService<UserJson>
             "Cannot Modify Password. Users for this server are controlled by Teamwork Cloud");
     }
 
-    @Override
     public UserJson update(UserJson userData, UserJson saveUser) {
         if (saveUser.getEmail() == null ||
             !saveUser.getEmail().equals(userData.getEmail())

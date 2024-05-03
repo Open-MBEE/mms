@@ -3,6 +3,7 @@ package org.openmbee.mms.json;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.media.Schema.AccessMode;
 
 @JsonIgnoreProperties({BaseJson.REFID, BaseJson.COMMITID, BaseJson.TYPE, "empty"})
 @Schema(name = "Project", requiredProperties = {ProjectJson.ORGID, BaseJson.NAME})
@@ -37,6 +38,11 @@ public class ProjectJson extends BaseJson<ProjectJson> {
 
     public ProjectJson setOrgId(String orgId) {
         this.put(ORGID, orgId);
+        return this;
+    }
+
+    public ProjectJson setDeleted(boolean deleted) {
+        this.put(DELETED, deleted);
         return this;
     }
 }

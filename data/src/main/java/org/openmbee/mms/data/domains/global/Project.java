@@ -61,6 +61,7 @@ public class Project extends Base {
     public Project(String projectId, String projectName) {
         this.projectId = projectId;
         this.projectName = projectName;
+        this.deleted = false;
     }
 
     public String getProjectName() {

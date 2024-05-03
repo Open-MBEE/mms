@@ -45,7 +45,7 @@ public class ProjectsController extends BaseController {
     }
 
     @GetMapping
-    public ProjectsResponse getAllProjects(Authentication auth, @RequestParam(required = false) String orgId) {
+    public ProjectsResponse getAllProjects(Authentication auth, @RequestParam(required = false) String orgId, @RequestParam(required = false, defaultValue = Constants.FALSE) boolean includeArchived) {
 
         ProjectsResponse response = new ProjectsResponse();
         Collection<ProjectJson> allProjects =
@@ -54,7 +54,7 @@ public class ProjectsController extends BaseController {
             try {
                 if (mss.hasProjectPrivilege(auth, projectJson.getProjectId(), Privileges.PROJECT_READ.name(), true)
                         && projectJson.getDocId() != null
-                        && !Constants.TRUE.equals(projectJson.getIsDeleted())) {
+                        && (!Constants.TRUE.equals(projectJson.getIsArchived()) || includeArchived)) {
                     response.getProjects().add(projectJson);
                 }
             } catch(NotFoundException ex) {
@@ -76,9 +76,6 @@ public class ProjectsController extends BaseController {
             throw new NotFoundException(response.addMessage("Project not found"));
         }
         response.getProjects().add(projectOption.get());
-        if (Constants.TRUE.equals(projectOption.get().getIsDeleted())) {
-            throw new DeletedException(response);
-        }
         return response;
     }
 

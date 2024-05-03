@@ -107,7 +107,7 @@ public class FederatedNodeChangeDomain extends NodeChangeDomain {
             previousDocId = n.getDocId();
             ((FederatedNodeChangeInfo) info).getOldDocIds().add(previousDocId);
             if(n.isDeleted()) {
-                existing.setIsDeleted(Constants.TRUE);
+                existing.setIsArchived(Constants.TRUE);
             }
         } else {
             return false;

@@ -13,7 +13,9 @@ public interface OrgPersistence {
 
     Collection<OrgJson> findAll();
 
-    OrgJson deleteById(String orgId);
+    void deleteById(String orgId);
+
+    void archiveById(String orgId);
 
     boolean hasPublicPermissions(String orgId);
 }

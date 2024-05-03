@@ -1,4 +1,4 @@
-package org.openmbee.mms.ldap;
+package org.openmbee.mms.ldap.config;
 
 import org.openmbee.mms.core.config.AuthorizationConstants;
 import org.openmbee.mms.core.dao.GroupPersistence;
@@ -6,6 +6,7 @@ import org.openmbee.mms.core.dao.UserGroupsPersistence;
 import org.openmbee.mms.core.dao.UserPersistence;
 import org.openmbee.mms.json.GroupJson;
 import org.openmbee.mms.json.UserJson;
+import org.openmbee.mms.ldap.security.LdapUsersDetailsService;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -19,17 +20,23 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.ldap.core.DirContextOperations;
+import org.springframework.ldap.core.LdapTemplate;
 import org.springframework.ldap.core.support.BaseLdapPathContextSource;
 import org.springframework.ldap.core.support.LdapContextSource;
 import org.springframework.ldap.filter.*;
 import org.springframework.ldap.support.LdapEncoder;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.authentication.configurers.ldap.LdapAuthenticationProviderConfigurer;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.ldap.SpringSecurityLdapTemplate;
+import org.springframework.security.ldap.authentication.AbstractLdapAuthenticationProvider;
+import org.springframework.security.ldap.authentication.LdapAuthenticationProvider;
 import org.springframework.security.ldap.authentication.ad.ActiveDirectoryLdapAuthenticationProvider;
 import org.springframework.security.ldap.userdetails.LdapAuthoritiesPopulator;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
@@ -64,6 +71,9 @@ public class LdapSecurityConfig {
     @Value("#{'${ldap.user.dn.pattern:uid={0}}'.split(';')}")
     private List<String> userDnPattern;
 
+    @Value("${ldap.user.attributes.dn:entrydn}")
+    private String userAttributesDn;
+
     @Value("${ldap.user.attributes.username:uid}")
     private String userAttributesUsername;
 
@@ -96,7 +106,8 @@ public class LdapSecurityConfig {
     private UserPersistence userPersistence;
     private GroupPersistence groupPersistence;
     private UserGroupsPersistence userGroupsPersistence;
-
+    private LdapUsersDetailsService ldapUsersDetailsService;
+    
     @Autowired
     public void setUserPersistence(UserPersistence userPersistence) {
         this.userPersistence = userPersistence;
@@ -110,6 +121,11 @@ public class LdapSecurityConfig {
     @Autowired
     public void setUserGroupsPersistence(UserGroupsPersistence userGroupsPersistence) {
         this.userGroupsPersistence = userGroupsPersistence;
+    }
+
+    @Autowired
+    public void setLdapUsersDetailsService(LdapUsersDetailsService ldapUsersDetailsService) {
+        this.ldapUsersDetailsService = ldapUsersDetailsService;
     }
 
     @Autowired
@@ -142,7 +158,7 @@ public class LdapSecurityConfig {
     }
 
     @Bean
-    LdapAuthoritiesPopulator ldapAuthoritiesPopulator(@Qualifier("contextSource") BaseLdapPathContextSource baseContextSource) {
+    LdapAuthoritiesPopulator ldapAuthoritiesPopulator() {
 
         /*
           Specificity here : we don't get the Role by reading the members of available groups (which is implemented by
@@ -150,37 +166,18 @@ public class LdapSecurityConfig {
          */
         class CustomLdapAuthoritiesPopulator implements LdapAuthoritiesPopulator {
 
-            final SpringSecurityLdapTemplate ldapTemplate;
+            @Autowired
+            private SpringSecurityLdapTemplate ldapTemplate;
 
-            private CustomLdapAuthoritiesPopulator(BaseLdapPathContextSource ldapContextSource) {
-                ldapTemplate = new SpringSecurityLdapTemplate(ldapContextSource);
-            }
+            private CustomLdapAuthoritiesPopulator() {}
 
             @Override
             public Collection<? extends GrantedAuthority> getGrantedAuthorities(
                 DirContextOperations userData, String username) {
                 logger.debug("Populating authorities using LDAP");
-                Optional<UserJson> userOptional = userPersistence.findByUsername(username);
+                UserJson user = ldapUsersDetailsService.loadUserByUsername(username).getUser();
 
-                if (userOptional.isEmpty()) {
-                    logger.info("No user record for {} in the userRepository, creating...", userData.getDn());
-                    UserJson newUser = createLdapUser(userData);
-                    userOptional = Optional.of(newUser);
-                }
-
-                UserJson user = userOptional.get();
-                if (user.getModified() != null && Instant.parse(user.getModified()).isBefore(Instant.now().minus(userAttributesUpdate, ChronoUnit.HOURS))) {
-                    saveLdapUser(userData, user);
-                }
-                user.setPassword(null);
-
-                StringBuilder userDnBuilder = new StringBuilder();
-                userDnBuilder.append(userData.getDn().toString());
-                if (providerBase != null && !providerBase.isEmpty()) {
-                    userDnBuilder.append(',');
-                    userDnBuilder.append(providerBase);
-                }
-                String userDn = userDnBuilder.toString();
+                String userDn = userData.getStringAttribute(userAttributesDn);
                 Collection<GroupJson> definedGroups = groupPersistence.findAll();
                 OrFilter orFilter = new OrFilter();
 
@@ -201,7 +198,6 @@ public class LdapSecurityConfig {
                     .searchForSingleAttributeValues(groupSearchBase, filter, new Object[]{""}, groupRoleAttribute);
                 logger.debug("LDAP search result: {}", Arrays.toString(memberGroups.toArray()));
 
-                userPersistence.save(user);
                 //Add groups to user
 
                 Set<GroupJson> addGroups = new HashSet<>();
@@ -231,12 +227,34 @@ public class LdapSecurityConfig {
             }
         }
 
-        return new CustomLdapAuthoritiesPopulator(baseContextSource);
+        return new CustomLdapAuthoritiesPopulator();
 
     }
 
     @Bean
     public AuthenticationProvider activeDirectoryLdapAuthenticationProvider() {
+
+        class CustomActiveDirectoryLdapAuthenticationProvider implements AuthenticationProvider {
+
+            private final ActiveDirectoryLdapAuthenticationProvider provider;
+
+            public CustomActiveDirectoryLdapAuthenticationProvider(ActiveDirectoryLdapAuthenticationProvider provider) {
+                this.provider = provider;
+
+            }
+            
+            @Override
+            public Authentication authenticate(Authentication authentication) {
+                Authentication auth = provider.authenticate(authentication);
+                return UsernamePasswordAuthenticationToken.authenticated(auth, null, ldapUsersDetailsService.getUserAuthorties(((UserDetails) auth.getPrincipal()).getUsername()));
+            }
+
+            @Override
+            public boolean supports(Class<?> authentication) {
+                return provider.supports(authentication);
+            }
+
+        }
         ActiveDirectoryLdapAuthenticationProvider provider = new ActiveDirectoryLdapAuthenticationProvider(adDomain, providerUrl, providerBase);
 
         Hashtable<String, Object> env = new Hashtable<>();
@@ -251,7 +269,7 @@ public class LdapSecurityConfig {
         provider.setSearchFilter(userSearchFilter);
         provider.setConvertSubErrorCodesToExceptions(true);
         provider.setUseAuthenticationRequestCredentials(true);
-        return provider;
+        return new CustomActiveDirectoryLdapAuthenticationProvider(provider);
     }
 
     @Bean
@@ -271,33 +289,10 @@ public class LdapSecurityConfig {
         return contextSource;
     }
 
-    private UserJson saveLdapUser(DirContextOperations userData, UserJson saveUser) {
-        if (saveUser.getEmail() == null ||
-            !saveUser.getEmail().equals(userData.getStringAttribute(userAttributesEmail))
-        ) {
-            saveUser.setEmail(userData.getStringAttribute(userAttributesEmail));
-        }
-        if (saveUser.getFirstName() == null ||
-            !saveUser.getFirstName().equals(userData.getStringAttribute(userAttributesFirstName))
-        ) {
-            saveUser.setFirstName(userData.getStringAttribute(userAttributesFirstName));
-        }
-        if (saveUser.getLastName() == null ||
-            !saveUser.getLastName().equals(userData.getStringAttribute(userAttributesLastName))
-        ) {
-            saveUser.setLastName(userData.getStringAttribute(userAttributesLastName));
-        }
-
-        return saveUser;
+    @Bean
+    public SpringSecurityLdapTemplate ldapTemplate() {
+        return new SpringSecurityLdapTemplate(contextSource());
     }
 
-    private UserJson createLdapUser(DirContextOperations userData) {
-        String username = userData.getStringAttribute(userAttributesUsername);
-        logger.debug("Creating user for {} using LDAP", username);
-        UserJson user = saveLdapUser(userData, new UserJson());
-        user.setUsername(username);
-        user.setEnabled(true);
-        user.setAdmin(false);
-        return userPersistence.save(user);
-    }
+   
 }

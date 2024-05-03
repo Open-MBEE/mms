@@ -7,6 +7,7 @@ import org.openmbee.mms.core.exceptions.NotFoundException;
 import org.openmbee.mms.core.exceptions.UnauthorizedException;
 import org.openmbee.mms.core.utils.AuthenticationUtils;
 import org.openmbee.mms.json.UserJson;
+import org.openmbee.mms.users.security.DefaultUsersDetailsService;
 import org.openmbee.mms.users.security.UsersDetails;
 import org.openmbee.mms.users.security.UsersDetailsService;
 import org.openmbee.mms.users.objects.UserCreateRequest;
@@ -14,10 +15,8 @@ import org.openmbee.mms.users.objects.UsersResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,10 +27,10 @@ import java.util.Collection;
 @Tag(name = "Auth")
 public class UsersController {
 
-    private UsersDetailsService usersDetailsService;
+    private DefaultUsersDetailsService usersDetailsService;
 
     @Autowired
-    public UsersController(UsersDetailsService usersDetailsService) {
+    public void setUsersDetailsService(DefaultUsersDetailsService usersDetailsService) {
         this.usersDetailsService = usersDetailsService;
     }
 
@@ -56,22 +55,28 @@ public class UsersController {
 
     @GetMapping(value = "/users")
     @PreAuthorize("isAuthenticated()")
-    public UsersResponse getUsers() {
+    public UsersResponse getUsers(@RequestParam(required = false) String username) {
         UsersResponse res = new UsersResponse();
-        Collection<UserJson> users = usersDetailsService.getUsers();
+        Collection<UserJson> users = new ArrayList<>();
+        if (username != null && !username.isEmpty()) {
+            users.add(usersDetailsService.loadUserByUsername(username).getUser());
+        } else {
+            users.addAll(usersDetailsService.getUsers());
+        }
+         usersDetailsService.getUsers();
         res.setUsers(users);
         return res;
     }
 
-    @GetMapping(value = "/users/:username")
-    @PreAuthorize("isAuthenticated()")
-    public UsersResponse getUsers(@PathVariable String username) {
-        UsersResponse res = new UsersResponse();
-        Collection<UserJson> users = new ArrayList<>();
-        users.add(usersDetailsService.loadUserByUsername(username).getUser());
-        res.setUsers(users);
-        return res;
-    }
+    // @GetMapping(value = "/users/:username")
+    // @PreAuthorize("isAuthenticated()")
+    // public UsersResponse getUsers(@PathVariable String username) {
+    //     UsersResponse res = new UsersResponse();
+    //     Collection<UserJson> users = new ArrayList<>();
+    //     users.add(usersDetailsService.loadUserByUsername(username).getUser());
+    //     res.setUsers(users);
+    //     return res;
+    // }
 
     @GetMapping(value = "/whoami")
     @PreAuthorize("isAuthenticated()")

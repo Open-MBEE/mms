@@ -17,7 +17,8 @@ public class OrganizationsResponse extends BaseResponse<OrganizationsResponse> {
         return orgs;
     }
 
-    public void setOrgs(List<OrgJson> orgs) {
+    public OrganizationsResponse setOrgs(List<OrgJson> orgs) {
         this.orgs = orgs;
+        return this;
     }
 }

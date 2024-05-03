@@ -1,7 +1,7 @@
 package org.openmbee.mms.localauth.config;
 
-import org.openmbee.mms.localauth.security.LocalUsersDetailsService;
 import org.openmbee.mms.users.objects.UserCreateRequest;
+import org.openmbee.mms.users.security.DefaultUsersDetailsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +17,7 @@ public class AuthProviderConfig {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthProviderConfig.class);
 
-    private LocalUsersDetailsService userDetailsService;
+    private DefaultUsersDetailsService userDetailsService;
     private PasswordEncoder passwordEncoder;
 
     @Value("${mms.admin.username}")
@@ -26,7 +26,7 @@ public class AuthProviderConfig {
     private String adminPassword;
 
     @Autowired
-    public void setUserDetailsService(LocalUsersDetailsService userDetailsService) {
+    public void setUserDetailsService(DefaultUsersDetailsService userDetailsService) {
         this.userDetailsService = userDetailsService;
     }
 
