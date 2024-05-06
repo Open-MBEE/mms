@@ -35,7 +35,10 @@ public class Group extends Base {
     @JsonProperty("public")
     private boolean isPublic;
 
-    public Group() {}
+    public Group() {
+        this.type = VALID_GROUP_TYPES.REMOTE;
+        this.typeString = VALID_GROUP_TYPES.REMOTE.toString().toLowerCase();
+    }
     public Group(String name) {
         this.name = name;
         this.type = VALID_GROUP_TYPES.REMOTE;

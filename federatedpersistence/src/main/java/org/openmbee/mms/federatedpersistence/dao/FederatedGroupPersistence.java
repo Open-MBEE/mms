@@ -35,6 +35,7 @@ public class FederatedGroupPersistence implements GroupPersistence {
     public GroupJson save(GroupJson groupJson) {
         Group groupObj = new Group();
         groupObj.setName(groupJson.getName());
+        groupObj.setType(groupJson.getType());
         Group saved = groupRepository.saveAndFlush(groupObj);
         return getJson(saved);
     }

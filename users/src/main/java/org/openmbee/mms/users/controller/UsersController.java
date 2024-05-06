@@ -2,14 +2,12 @@ package org.openmbee.mms.users.controller;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.openmbee.mms.core.config.AuthorizationConstants;
-import org.openmbee.mms.core.exceptions.BadRequestException;
 import org.openmbee.mms.core.exceptions.NotFoundException;
 import org.openmbee.mms.core.exceptions.UnauthorizedException;
 import org.openmbee.mms.core.utils.AuthenticationUtils;
 import org.openmbee.mms.json.UserJson;
 import org.openmbee.mms.users.security.DefaultUsersDetailsService;
 import org.openmbee.mms.users.security.UsersDetails;
-import org.openmbee.mms.users.security.UsersDetailsService;
 import org.openmbee.mms.users.objects.UserCreateRequest;
 import org.openmbee.mms.users.objects.UsersResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,16 +65,6 @@ public class UsersController {
         res.setUsers(users);
         return res;
     }
-
-    // @GetMapping(value = "/users/:username")
-    // @PreAuthorize("isAuthenticated()")
-    // public UsersResponse getUsers(@PathVariable String username) {
-    //     UsersResponse res = new UsersResponse();
-    //     Collection<UserJson> users = new ArrayList<>();
-    //     users.add(usersDetailsService.loadUserByUsername(username).getUser());
-    //     res.setUsers(users);
-    //     return res;
-    // }
 
     @GetMapping(value = "/whoami")
     @PreAuthorize("isAuthenticated()")

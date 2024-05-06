@@ -33,6 +33,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.ldap.SpringSecurityLdapTemplate;
 import org.springframework.security.ldap.authentication.AbstractLdapAuthenticationProvider;
@@ -166,64 +167,13 @@ public class LdapSecurityConfig {
          */
         class CustomLdapAuthoritiesPopulator implements LdapAuthoritiesPopulator {
 
-            @Autowired
-            private SpringSecurityLdapTemplate ldapTemplate;
-
             private CustomLdapAuthoritiesPopulator() {}
 
             @Override
             public Collection<? extends GrantedAuthority> getGrantedAuthorities(
                 DirContextOperations userData, String username) {
                 logger.debug("Populating authorities using LDAP");
-                UserJson user = ldapUsersDetailsService.loadUserByUsername(username).getUser();
-
-                String userDn = userData.getStringAttribute(userAttributesDn);
-                Collection<GroupJson> definedGroups = groupPersistence.findAll();
-                OrFilter orFilter = new OrFilter();
-
-                for (GroupJson definedGroup : definedGroups) {
-                    orFilter.or(new EqualsFilter(groupRoleAttribute, definedGroup.getName()));
-                }
-
-                AndFilter andFilter = new AndFilter();
-                HardcodedFilter groupsFilter = new HardcodedFilter(
-                    groupSearchFilter.replace("{0}", LdapEncoder.filterEncode(userDn)));
-                andFilter.and(groupsFilter);
-                andFilter.and(orFilter);
-
-                String filter = andFilter.encode();
-                logger.debug("Searching LDAP with filter: {}", filter);
-
-                Set<String> memberGroups = ldapTemplate
-                    .searchForSingleAttributeValues(groupSearchBase, filter, new Object[]{""}, groupRoleAttribute);
-                logger.debug("LDAP search result: {}", Arrays.toString(memberGroups.toArray()));
-
-                //Add groups to user
-
-                Set<GroupJson> addGroups = new HashSet<>();
-                
-                for (String memberGroup : memberGroups) {
-                    Optional<GroupJson> group = groupPersistence.findByName(memberGroup);
-                    group.ifPresent(g -> userGroupsPersistence.addUserToGroup(g.getName(), user.getUsername()));
-                    group.ifPresent(addGroups::add);
-                }
-
-                if (logger.isDebugEnabled()) {
-                    if ((long) addGroups.size() > 0) {
-                        addGroups.forEach(group -> logger.debug("Group received: {}", group.getName()));
-                    } else {
-                        logger.debug("No configured groups returned from LDAP");
-                    }
-                }
-
-
-                List<GrantedAuthority> auths = AuthorityUtils
-                    .createAuthorityList(memberGroups.toArray(new String[0]));
-                if (Boolean.TRUE.equals(user.isAdmin())) {
-                    auths.add(new SimpleGrantedAuthority(AuthorizationConstants.MMSADMIN));
-                }
-                auths.add(new SimpleGrantedAuthority(AuthorizationConstants.EVERYONE));
-                return auths;
+                return ldapUsersDetailsService.getUserAuthorities(username);
             }
         }
 
@@ -246,7 +196,7 @@ public class LdapSecurityConfig {
             @Override
             public Authentication authenticate(Authentication authentication) {
                 Authentication auth = provider.authenticate(authentication);
-                return UsernamePasswordAuthenticationToken.authenticated(auth, null, ldapUsersDetailsService.getUserAuthorties(((UserDetails) auth.getPrincipal()).getUsername()));
+                return UsernamePasswordAuthenticationToken.authenticated(auth.getPrincipal(), auth.getCredentials(), ldapUsersDetailsService.getUserAuthorities(((UserDetails) auth.getPrincipal()).getUsername()));
             }
 
             @Override

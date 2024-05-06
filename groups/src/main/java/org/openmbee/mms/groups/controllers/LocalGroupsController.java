@@ -5,15 +5,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import org.openmbee.mms.core.config.AuthorizationConstants;
+import org.openmbee.mms.core.config.Constants;
 import org.openmbee.mms.core.config.Privileges;
 import org.openmbee.mms.core.dao.GroupPersistence;
 import org.openmbee.mms.core.dao.UserGroupsPersistence;
-import org.openmbee.mms.core.dao.UserPersistence;
 import org.openmbee.mms.core.exceptions.*;
 import org.openmbee.mms.core.objects.*;
 import org.openmbee.mms.core.security.MethodSecurityService;
@@ -22,16 +19,13 @@ import org.openmbee.mms.groups.constants.GroupConstants;
 import org.openmbee.mms.groups.objects.*;
 import org.openmbee.mms.groups.services.GroupValidationService;
 import org.openmbee.mms.json.GroupJson;
-import org.openmbee.mms.json.OrgJson;
 import org.openmbee.mms.json.UserJson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -48,7 +42,6 @@ public class LocalGroupsController {
 
     private GroupPersistence groupPersistence;
     private GroupValidationService groupValidationService;
-    private UserPersistence userPersistence;
     private UserGroupsPersistence userGroupsPersistence;
 
     protected PermissionService permissionService;
@@ -89,9 +82,63 @@ public class LocalGroupsController {
         this.om = om;
     }
 
-    @Autowired
-    public void setUserPersistence(UserPersistence userPersistence) {
-        this.userPersistence = userPersistence;
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Transactional
+    @PreAuthorize("isAuthenticated()")
+    public GroupsResponse createOrUpdateGroups(
+        @RequestBody GroupsRequest groupPost,
+        Authentication auth) {
+
+        GroupsResponse response = new GroupsResponse();
+        if (groupPost.getGroups().isEmpty()) {
+            throw new BadRequestException(response.addMessage("No groups provided"));
+        }
+
+        for (GroupJson group : groupPost.getGroups()) {
+
+            if (group.getName() == null || group.getName().isEmpty()) {
+                group.setName(UUID.randomUUID().toString());
+            }
+
+            if (!groupValidationService.isValidGroupName(group.getName())) {
+                throw new BadRequestException(GroupConstants.INVALID_GROUP_NAME);
+            }
+
+            if (group.getType() == null || group.getType().isEmpty()) {
+                throw new BadRequestException(response.addMessage("No type provided for group:" + group.getName()));
+            }
+
+            Optional<GroupJson> optG = groupPersistence.findByName(group.getName());
+            boolean newGroup = true;
+            GroupJson g = new GroupJson();
+            if (optG.isPresent()) {
+                newGroup = false;
+                g = optG.get();
+                if (!mss.hasGroupPrivilege(auth, g.getName(), Privileges.GROUP_EDIT.name(), false)) {
+                    response.addRejection(new Rejection(group, 403, GroupConstants.NO_PERMISSSION));
+                    continue;
+                }
+                if (!g.getType().equals("local")) {
+                    response.addRejection(new Rejection(group, 403, "Unable to update non-local groups"));
+                }
+                if (!group.getType().equals(g.getType()) && !(userGroupsPersistence.findUsersInGroup(g.getName()) == null || userGroupsPersistence.findUsersInGroup(g.getName()).isEmpty())) {
+                    response.addRejection(new Rejection(group, 403, GroupConstants.GROUP_NOT_EMPTY));
+                }
+            }
+            g.setName(group.getName());
+            g.setType(group.getType());
+            logger.info("Saving group: {}", g.getName());
+            GroupJson saved = groupPersistence.save(g);
+            if (newGroup) {
+                permissionService.initGroupPerms(group.getName(), auth.getName());
+            }
+            group.merge(convertToMap(saved));
+            response.getGroups().add(group);
+        }
+        if (groupPost.getGroups().size() == 1) {
+            handleSingleResponse(response);
+        }
+        return response;
     }
 
     @PutMapping("/{group}")
@@ -120,7 +167,7 @@ public class LocalGroupsController {
         GroupsResponse response = new GroupsResponse();
         Collection<GroupJson> allGroups = groupPersistence.findAll();
         for (GroupJson group : allGroups) {
-            if (mss.hasOrgPrivilege(auth, group.getName(), Privileges.GROUP_READ.name(), false)) {
+            if (mss.hasGroupPrivilege(auth, group.getName(), Privileges.GROUP_READ.name(), false)) {
                 response.getGroups().add(group);
             }
         }
@@ -129,9 +176,9 @@ public class LocalGroupsController {
 
     @GetMapping(value = "/{group}")
     @PreAuthorize("@mss.hasGroupPrivilege(authentication, #group, 'GROUP_READ', true)")
-    public GroupResponse getGroup(@PathVariable String group) {
+    public GroupResponse getGroup(@PathVariable String group, @RequestParam(required = false, defaultValue = Constants.TRUE) boolean users) {
         return new GroupResponse(groupPersistence.findByName(group).orElseThrow(() -> new NotFoundException(GroupConstants.GROUP_NOT_FOUND)),
-            userGroupsPersistence.findUsersInGroup(group).stream().map(UserJson::getUsername).collect(Collectors.toList()));
+            users ? userGroupsPersistence.findUsersInGroup(group).stream().map(UserJson::getUsername).collect(Collectors.toList()) : null);
     }
 
     @DeleteMapping("/{group}")

@@ -16,13 +16,17 @@ import org.openmbee.mms.federatedpersistence.permissions.exceptions.PermissionEx
 import org.openmbee.mms.rdb.repositories.GroupGroupPermRepository;
 import org.openmbee.mms.rdb.repositories.GroupUserPermRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
 import org.springframework.data.util.Pair;
 import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 
+@Component
+@Scope(value = "prototype")
 public class DefaultGroupPermissionsDelegate extends AbstractDefaultPermissionsDelegate {
 
     private GroupUserPermRepository groupUserPermRepo;
@@ -46,15 +50,19 @@ public class DefaultGroupPermissionsDelegate extends AbstractDefaultPermissionsD
 
     @Override
     public boolean hasPermission(String user, Set<String> groupPerms, String privilege) {
-
         Optional<Privilege> priv = getPrivRepo().findByName(privilege);
         if (priv.isEmpty()) {
             throw new PermissionException(HttpStatus.BAD_REQUEST, "No such privilege");
         }
 
+        
         //Return false if group is remotely managed
         if (group.getType().equals(Group.VALID_GROUP_TYPES.REMOTE) && privilege.equalsIgnoreCase("GROUP_EDIT")) {
             throw new PermissionException(HttpStatus.BAD_REQUEST, "Unable to edit remote groups.");
+        }
+
+        if (groupPerms.contains(AuthorizationConstants.MMSADMIN)) {
+            return true;
         }
 
         Set<Role> roles = priv.get().getRoles();

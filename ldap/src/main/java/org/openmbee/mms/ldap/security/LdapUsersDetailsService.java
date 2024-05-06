@@ -189,33 +189,45 @@ public class LdapUsersDetailsService extends DefaultUsersDetailsService {
         return update(userData, user);
     }
 
-    public Collection<? extends GrantedAuthority> getUserAuthorties(String username) {
+    public Collection<? extends GrantedAuthority> getUserAuthorities(String username) {
         Collection<GroupJson> definedGroups = groupPersistence.findAll();
         OrFilter orFilter = new OrFilter();
         UserJson user = getUser(username);
         for (GroupJson definedGroup : definedGroups) {
-            orFilter.or(new EqualsFilter(groupRoleAttribute, definedGroup.getName()));
+            //Add the group to the list if it's from LDAP (or null just to be safe)
+            if (definedGroup.getType().equals(LdapUsersDetailsService.TYPE) || definedGroup.getType() == null){
+                orFilter.or(new EqualsFilter(groupRoleAttribute, definedGroup.getName()));
+            }
         }
         String userDn = user.getDistingushedName();
         AndFilter andFilter = new AndFilter();
-                HardcodedFilter groupsFilter = new HardcodedFilter(
-                    groupSearchFilter.replace("{0}", LdapEncoder.filterEncode(userDn)));
+        HardcodedFilter groupsFilter = new HardcodedFilter(
+            "(" + groupSearchFilter.replace("{0}", LdapEncoder.filterEncode(userDn)) + ")");
         andFilter.and(groupsFilter);
         andFilter.and(orFilter);
         String filter = andFilter.encode();
+        Set<String> allGroups = ldapTemplate
+        .searchForSingleAttributeValues(groupSearchBase, orFilter.encode(), new Object[]{""}, groupRoleAttribute);
         Set<String> memberGroups = ldapTemplate
             .searchForSingleAttributeValues(groupSearchBase, filter, new Object[]{""}, groupRoleAttribute);
         logger.debug("LDAP search result: {}", Arrays.toString(memberGroups.toArray()));
 
         //Add groups to user
 
-        Set<GroupJson> addGroups = new HashSet<>();
+        //Set<GroupJson> addGroups = new HashSet<>();
         
-        for (String memberGroup : memberGroups) {
-            Optional<GroupJson> group = groupPersistence.findByName(memberGroup);
-            group.ifPresent(g -> userGroupsPersistence.addUserToGroup(g.getName(), user.getUsername()));
-            group.ifPresent(addGroups::add);
+        //Update user membershup to any groups that were found to match
+        for (String ldapGroup : allGroups) {
+            Optional<GroupJson> group = groupPersistence.findByName(ldapGroup);
+            if (memberGroups.contains(ldapGroup)) {
+                group.ifPresent(g -> userGroupsPersistence.addUserToGroup(g.getName(), user.getUsername()));
+            } else {
+                group.ifPresent(g -> userGroupsPersistence.removeUserFromGroup(g.getName(), user.getUsername()));
+            }
         }
+
+        //Finally calculate total group authority using UserGroupsPersistence
+        Collection<GroupJson> addGroups = userGroupsPersistence.findGroupsAssignedToUser(user.getUsername());
 
         if (logger.isDebugEnabled()) {
             if ((long) addGroups.size() > 0) {

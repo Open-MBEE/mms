@@ -86,11 +86,10 @@ public class DefaultFederatedPermissionsDelegateFactory implements PermissionsDe
 
     @Override
     public PermissionsDelegate getPermissionsDelegate(GroupJson group) {
-        ContextHolder.setContext(null);
         Optional<Group> groupOptional = groupRepository.findByName(group.getName());
         if(groupOptional.isEmpty()) {
             throw new NotFoundException("group not found");
         }
-        return applicationContext.getBean(DefaultBranchPermissionsDelegate.class, groupOptional.get());
+        return applicationContext.getBean(DefaultGroupPermissionsDelegate.class, groupOptional.get());
     }
 }

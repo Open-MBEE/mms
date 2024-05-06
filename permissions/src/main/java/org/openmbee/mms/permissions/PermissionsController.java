@@ -149,7 +149,7 @@ public class PermissionsController {
     }
 
     @GetMapping(value = "/groups/{group}/permissions")
-    @PreAuthorize("@mss.hasGroupPrivilege(authentication, #groupName, 'GROUP_READ_PERMISSIONS', true)")
+    @PreAuthorize("@mss.hasGroupPrivilege(authentication, #group, 'GROUP_READ_PERMISSIONS', true)")
     public PermissionsResponse getGroupPermissions(
         @PathVariable String group) {
 

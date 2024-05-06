@@ -78,7 +78,7 @@ public class PermissionsDelegateUtil {
         }
 
         throw new InternalErrorException(
-            "No valid permissions scheme found for project " + group.getName()
+            "No valid permissions scheme found for group " + group.getName()
                 + " (" + group.getName() + ")");
     }
 }

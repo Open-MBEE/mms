@@ -24,6 +24,7 @@ import org.openmbee.mms.json.RefJson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -278,11 +279,13 @@ public class DefaultPermissionService implements PermissionService {
 
     @Override
     public boolean hasGroupPrivilege(String privilege, String user, Set<String> groups, String groupName) {
-        //Return true, however admin are only allowed "delete" perms on Remote group types
-        if (groups.contains(AuthorizationConstants.MMSADMIN)) return true;
 
+        if (privilege.equals("GROUP_READ") && groupName.equals(AuthorizationConstants.EVERYONE)) {
+            return true;
+        }
+        
         GroupJson group = getGroup(groupName);
-
+       
         PermissionsDelegate permissionsDelegate = permissionsDelegateUtil.getPermissionsDelegate(group);
         return permissionsDelegate.hasPermission(user, groups, privilege);
     }
