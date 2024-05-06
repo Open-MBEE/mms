@@ -13,6 +13,7 @@ import java.util.Optional;
 import org.openmbee.mms.data.dao.BranchDAO;
 import org.openmbee.mms.data.dao.CommitDAO;
 import org.openmbee.mms.core.exceptions.InternalErrorException;
+import org.openmbee.mms.core.config.Constants;
 import org.openmbee.mms.data.domains.scoped.Branch;
 import org.openmbee.mms.data.domains.scoped.Commit;
 import org.openmbee.mms.rdb.repositories.BaseDAOImpl;
@@ -63,7 +64,7 @@ public class CommitDAOImpl extends BaseDAOImpl implements CommitDAO {
         String sql = "SELECT * FROM commits WHERE id = ?";
 
         List<Commit> l = getConn()
-            .query(sql, new Object[]{id}, new CommitRowMapper());
+            .query(sql, new CommitRowMapper(), new Object[]{id});
         return l.isEmpty() ? Optional.empty() : Optional.of(l.get(0));
 
     }
@@ -72,7 +73,7 @@ public class CommitDAOImpl extends BaseDAOImpl implements CommitDAO {
         String sql = "SELECT * FROM commits WHERE commitid = ?";
 
         List<Commit> l = getConn()
-            .query(sql, new Object[]{commitId}, new CommitRowMapper());
+            .query(sql, new CommitRowMapper(), new Object[]{commitId});
         return l.isEmpty() ? Optional.empty() : Optional.of(l.get(0));
 
     }
@@ -156,7 +157,7 @@ public class CommitDAOImpl extends BaseDAOImpl implements CommitDAO {
             currentRef = ref.getParentRefId();
             currentCid = ref.getParentCommit();
 
-            if (currentRef == null) {
+            if (currentRef == null || currentRef.equals(Constants.MASTER_BRANCH)) {
                 break;
             }
             Optional<Branch> parent = branchRepository.findByBranchId(currentRef);
