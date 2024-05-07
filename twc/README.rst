@@ -3,7 +3,13 @@
 TWC
 ---
 
-The TWC Module provides integration with NoMagic's Teamwork Cloud.
+The TWC Module provides integration with NoMagic's Teamwork Cloud. For MDK SSO login integration, the MDK and TWC must be configured.
+
+TWC: TWC SSO must be configured correctly and working via the Single-Sign On tab when logging in to TWC from Cameo
+
+MDK: Under Options -> Environment -> MDK -> Set MMS Authentication Chain, add `org.openmbee.mdk.tickets.TWCAcquireTicketProcessor` to the front
+
+MMS: If the TWC api has a self-signed or private SSL cert, ensure the Java runtime running MMS has the root cert in its keystore
 
 Configuration
 ^^^^^^^^^^^^^
