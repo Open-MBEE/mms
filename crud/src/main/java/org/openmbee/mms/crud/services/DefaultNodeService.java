@@ -13,6 +13,7 @@ import org.openmbee.mms.core.services.NodeChangeInfo;
 import org.openmbee.mms.core.services.NodeGetInfo;
 import org.openmbee.mms.core.services.NodeService;
 import org.openmbee.mms.crud.CrudConstants;
+import org.openmbee.mms.crud.config.OptimizationConfig;
 import org.openmbee.mms.json.BaseJson;
 import org.openmbee.mms.json.CommitJson;
 import org.openmbee.mms.json.ElementJson;
@@ -36,6 +37,7 @@ public class DefaultNodeService implements NodeService {
     protected NodePersistence nodePersistence;
 
     protected Collection<EventService> eventPublisher;
+    protected OptimizationConfig optimizationConfig;
 
     @Autowired
     public void setCommitPersistence(CommitPersistence commitPersistence) {
@@ -56,6 +58,10 @@ public class DefaultNodeService implements NodeService {
         this.eventPublisher = eventPublisher;
     }
 
+    @Autowired
+    public void setOptimizationConfig(OptimizationConfig optimizationConfig) {
+        this.optimizationConfig = optimizationConfig;
+    }
     @Override
     public void readAsStream(String projectId, String refId, Map<String, String> params, OutputStream stream,
             String accept) throws IOException {
@@ -66,7 +72,7 @@ public class DefaultNodeService implements NodeService {
             if (!commitPersistence.findById(projectId, commitId).isPresent()) {
                 throw new BadRequestException("commit id is invalid");
             }
-        } else {
+        } else if (!optimizationConfig.isOptimizeForFederated()) {
             Optional<CommitJson> commitJson = commitPersistence.findLatestByProjectAndRef(projectId, refId);
             if (!commitJson.isPresent()) {
                 throw new InternalErrorException("Could not find latest commit for project and ref");
@@ -100,7 +106,7 @@ public class DefaultNodeService implements NodeService {
             return read(projectId, refId, req, params);
         }
         String commitId = params.getOrDefault(CrudConstants.COMMITID, null);
-        if (commitId == null) {
+        if (commitId == null && !optimizationConfig.isOptimizeForFederated()) {
             Optional<CommitJson> commitJson = commitPersistence.findLatestByProjectAndRef(projectId, refId);
             if (!commitJson.isPresent()) {
                 throw new InternalErrorException("Could not find latest commit for project and ref");
@@ -123,7 +129,7 @@ public class DefaultNodeService implements NodeService {
         Map<String, String> params) {
 
         String commitId = params.getOrDefault(CrudConstants.COMMITID, null);
-        if (commitId == null) {
+        if (commitId == null && !optimizationConfig.isOptimizeForFederated()) {
             Optional<CommitJson> commitJson = commitPersistence.findLatestByProjectAndRef(projectId, refId);
             if (!commitJson.isPresent()) {
                 throw new InternalErrorException("Could not find latest commit for project and ref");

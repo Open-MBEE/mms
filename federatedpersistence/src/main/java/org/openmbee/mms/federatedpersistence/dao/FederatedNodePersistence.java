@@ -112,34 +112,32 @@ public class FederatedNodePersistence implements NodePersistence {
     @Override
     public List<ElementJson> findAllByNodeType(String projectId, String refId, String commitId, int nodeType) {
         ContextHolder.setContext(projectId, refId);
-        String commitToPass = checkCommit(refId, commitId);
         List<Node> nodes;
-        if (commitToPass != null) {
+        if (commitId != null) {
             nodes = nodeDAO.findAllByNodeType(nodeType);
         } else {
             nodes = nodeDAO.findAllByDeletedAndNodeType(false, nodeType);
         }
-        return new ArrayList<>(getNodeGetDomain().processGetJsonFromNodes(nodes, commitToPass).getActiveElementMap().values());
+        return new ArrayList<>(getNodeGetDomain().processGetJsonFromNodes(nodes, commitId).getActiveElementMap().values());
     }
 
 
     @Override
     public NodeGetInfo findAll(String projectId, String refId, String commitId, List<ElementJson> elements) {
         ContextHolder.setContext(projectId, refId);
-        return getNodeGetDomain().processGetJson(elements, checkCommit(refId, commitId));
+        return getNodeGetDomain().processGetJson(elements, commitId);
     }
 
     @Override
     public List<ElementJson> findAll(String projectId, String refId, String commitId) {
         ContextHolder.setContext(projectId, refId);
         List<Node> nodes;
-        String commitToPass = checkCommit(refId, commitId);
-        if (commitToPass != null) {
+        if (commitId != null) {
             nodes = nodeDAO.findAll();
         } else {
             nodes = nodeDAO.findAllByDeleted(false);
         }
-        return new ArrayList<>(getNodeGetDomain().processGetJsonFromNodes(nodes, commitToPass).getActiveElementMap().values());
+        return new ArrayList<>(getNodeGetDomain().processGetJsonFromNodes(nodes, commitId).getActiveElementMap().values());
     }
 
 
@@ -147,8 +145,7 @@ public class FederatedNodePersistence implements NodePersistence {
     public void streamAllAtCommit(String projectId, String refId, String commitId, OutputStream stream, String separator) {
         ContextHolder.setContext(projectId, refId);
         List<Node> nodes;
-        final String commitToPass = checkCommit(refId, commitId);
-        if (commitToPass != null) {
+        if (commitId != null) {
             nodes = nodeDAO.findAll();
         } else {
             nodes = nodeDAO.findAllByDeleted(false);
@@ -161,7 +158,7 @@ public class FederatedNodePersistence implements NodePersistence {
                 } else {
                     stream.write(separator.getBytes(StandardCharsets.UTF_8));
                 }
-                Collection<ElementJson> result = getNodeGetDomain().processGetJsonFromNodes(ns, commitToPass)
+                Collection<ElementJson> result = getNodeGetDomain().processGetJsonFromNodes(ns, commitId)
                     .getActiveElementMap().values();
                 result.forEach(v -> v.setRefId(refId));
                 stream.write(result.stream().map(this::toJson).collect(Collectors.joining(separator))
@@ -255,28 +252,4 @@ public class FederatedNodePersistence implements NodePersistence {
         return federatedInfo;
     }
 
-    private void validateBranch(Optional<Branch> branch) {
-        if (!branch.isPresent()) {
-            throw new InternalErrorException("Cannot find branch");
-        }
-    }
-
-    private void validateCommit(Optional<Commit> commit) {
-        if (!commit.isPresent()) {
-            throw new BadRequestException("commit id is invalid");
-        }
-    }
-
-    // if commitId is latest, return null
-    private String checkCommit(String refId, String commitId) {
-        Optional<Branch> branch = branchDAO.findByBranchId(refId);
-        validateBranch(branch);
-        if (commitId != null && !commitId.isEmpty() && !commitId.equals(
-                commitDAO.findLatestByRef(branch.get()).map(Commit::getCommitId).orElse(null))) {
-            validateCommit(commitDAO.findByCommitId(commitId));
-            return commitId;
-        } else {
-            return null;
-        }
-    }
 }
