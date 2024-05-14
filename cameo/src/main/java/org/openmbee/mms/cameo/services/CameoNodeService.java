@@ -44,12 +44,16 @@ public class CameoNodeService extends DefaultNodeService implements Hierarchical
             Map<String, String> params) {
 
         String commitId = params.getOrDefault(CrudConstants.COMMITID, null);
-        if (commitId == null && !optimizationConfig.isOptimizeForFederated()) {
+        String resCommitId = commitId;
+        if (commitId == null) {
             Optional<CommitJson> commitJson = commitPersistence.findLatestByProjectAndRef(projectId, refId);
             if (!commitJson.isPresent()) {
                 throw new InternalErrorException("Could not find latest commit for project and ref");
             }
-            commitId = commitJson.get().getId();
+            resCommitId = commitJson.get().getId();
+            if (!optimizationConfig.isOptimizeForFederated()) {
+                commitId = resCommitId;
+            }
         }
 
         NodeGetInfo info = getNodePersistence().findAll(projectId, refId, commitId, req.getElements());

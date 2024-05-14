@@ -135,13 +135,8 @@ public class FederatedCommitPersistence implements CommitPersistence {
         if(!commit.isPresent()) {
             return Optional.empty();
         }
-        Optional<CommitJson> commitJson = commitIndexDAO.findById(commit.get().getCommitId());
-        if(!commitJson.isPresent()) {
-            throw new InternalErrorException(
-                String.format("Federated data model inconsistency: Could not find commit json for commitId %s",
-                    commit.get().getCommitId()));
-        }
-        return commitJson;
+        CommitJson json = getJsonFromCommit(commit.get(), projectId);
+        return Optional.of(json);
     }
 
     @Override
@@ -155,13 +150,7 @@ public class FederatedCommitPersistence implements CommitPersistence {
         List<Commit> commitList = commitDAO.findByRefAndTimestampAndLimit(b, timestamp, limit);
         List<CommitJson> commits = new ArrayList<>();
         for (Commit c : commitList) {
-            CommitJson json = new CommitJson();
-            json.setCreated(Formats.FORMATTER.format(c.getTimestamp()));
-            json.setCreator(c.getCreator());
-            json.setId(c.getCommitId());
-            json.setComment(c.getComment());
-            json.setRefId(c.getBranchId());
-            json.setProjectId(projectId);
+            CommitJson json = getJsonFromCommit(c, projectId);
             commits.add(json);
         }
         return commits;
@@ -196,5 +185,16 @@ public class FederatedCommitPersistence implements CommitPersistence {
             return commitJsonOptional;
         }
         return Optional.empty();
+    }
+
+    private CommitJson getJsonFromCommit(Commit c, String projectId) {
+        CommitJson json = new CommitJson();
+        json.setCreated(Formats.FORMATTER.format(c.getTimestamp()));
+        json.setCreator(c.getCreator());
+        json.setId(c.getCommitId());
+        json.setComment(c.getComment());
+        json.setRefId(c.getBranchId());
+        json.setProjectId(projectId);
+        return json;
     }
 }
