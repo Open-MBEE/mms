@@ -251,7 +251,8 @@ public class CameoViewService extends CameoNodeService implements ViewService {
                 return next;
             }
             nextId = (String)next.get().get(relkey);
-            if (nextId == null || nextId.isEmpty()) {
+            // If there isn't a next or if the nextId would be the project root (would return empty element)
+            if (nextId == null || nextId.isEmpty() || next.get().getId().endsWith(CameoConstants.PROJECT_MODEL_SUFFIX)) {
                 return Optional.empty();
             }
             getInfo = nodePersistence.findById(projectId, refId, commitId, nextId);

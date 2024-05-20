@@ -176,9 +176,9 @@ public class LocalGroupsController {
 
     @GetMapping(value = "/{group}")
     @PreAuthorize("@mss.hasGroupPrivilege(authentication, #group, 'GROUP_READ', true)")
-    public GroupResponse getGroup(@PathVariable String group, @RequestParam(required = false, defaultValue = Constants.TRUE) boolean users) {
+    public GroupResponse getGroup(@PathVariable String group) {
         return new GroupResponse(groupPersistence.findByName(group).orElseThrow(() -> new NotFoundException(GroupConstants.GROUP_NOT_FOUND)),
-            users ? userGroupsPersistence.findUsersInGroup(group).stream().map(UserJson::getUsername).collect(Collectors.toList()) : null);
+            userGroupsPersistence.findUsersInGroup(group).stream().map(UserJson::getUsername).collect(Collectors.toList()));
     }
 
     @DeleteMapping("/{group}")
