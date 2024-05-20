@@ -85,7 +85,7 @@ public class CameoNodeService extends DefaultNodeService implements Hierarchical
         ElementsResponse response = new ElementsResponse();
         response.getElements().addAll(info.getActiveElementMap().values());
         response.setRejected(new ArrayList<>(info.getRejected().values()));
-        response.setCommitId(commitId);
+        response.setCommitId(resCommitId);
         return response;
     }
 
