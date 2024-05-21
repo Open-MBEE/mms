@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import org.openmbee.mms.crud.CrudConstants;
 import org.openmbee.mms.crud.domain.JsonDomain;
 import org.openmbee.mms.msosa.MsosaConstants;
 import org.openmbee.mms.msosa.MsosaNodeType;
@@ -31,7 +32,8 @@ public class MsosaViewService extends MsosaNodeService implements ViewService {
     public ElementsResponse getDocuments(String projectId, String refId, Map<String, String> params) {
         ContextHolder.setContext(projectId, refId);
         String commitId = params.getOrDefault(MsosaConstants.COMMITID, null);
-        List<ElementJson> documents = getNodePersistence().findAllByNodeType(projectId, refId, commitId, MsosaNodeType.DOCUMENT.getValue());
+        Boolean deleted = Boolean.parseBoolean(params.getOrDefault(CrudConstants.DELETED, "false"));
+        List<ElementJson> documents = getNodePersistence().findAllByNodeType(projectId, refId, commitId, MsosaNodeType.DOCUMENT.getValue(), deleted);
         for (ElementJson e: documents) {
             Optional<ElementJson> parent = getFirstRelationshipOfType(projectId, refId, commitId, e,
                 Arrays.asList(MsosaNodeType.GROUP.getValue()), MsosaConstants.OWNERID);
@@ -81,9 +83,10 @@ public class MsosaViewService extends MsosaNodeService implements ViewService {
     @Override
     public ElementsResponse getGroups(String projectId, String refId, Map<String, String> params) {
         ContextHolder.setContext(projectId, refId);
+        Boolean deleted = Boolean.parseBoolean(params.getOrDefault(CrudConstants.DELETED, "false"));
         String commitId = params.getOrDefault(MsosaConstants.COMMITID, null);
         List<ElementJson> groups = getNodePersistence().findAllByNodeType(projectId, refId, commitId,
-            MsosaNodeType.GROUP.getValue());
+            MsosaNodeType.GROUP.getValue(), deleted);
         ElementsResponse res = this.read(projectId, refId, buildRequestFromJsons(groups), params);
         for (ElementJson e: res.getElements()) {
             Optional<ElementJson> parent = getFirstRelationshipOfType(projectId, refId, commitId, e,

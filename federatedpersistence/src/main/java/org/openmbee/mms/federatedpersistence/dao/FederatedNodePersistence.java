@@ -110,14 +110,14 @@ public class FederatedNodePersistence implements NodePersistence {
     }
 
     @Override
-    public List<ElementJson> findAllByNodeType(String projectId, String refId, String commitId, int nodeType) {
+    public List<ElementJson> findAllByNodeType(String projectId, String refId, String commitId, int nodeType, Boolean deleted) {
         ContextHolder.setContext(projectId, refId);
         String commitToPass = checkCommit(refId, commitId);
         List<Node> nodes;
         if (commitToPass != null) {
             nodes = nodeDAO.findAllByNodeType(nodeType);
         } else {
-            nodes = nodeDAO.findAllByDeletedAndNodeType(false, nodeType);
+            nodes = nodeDAO.findAllByDeletedAndNodeType(deleted, nodeType);
         }
         return new ArrayList<>(getNodeGetDomain().processGetJsonFromNodes(nodes, commitToPass).getActiveElementMap().values());
     }
@@ -130,28 +130,28 @@ public class FederatedNodePersistence implements NodePersistence {
     }
 
     @Override
-    public List<ElementJson> findAll(String projectId, String refId, String commitId) {
+    public List<ElementJson> findAll(String projectId, String refId, String commitId, Boolean deleted) {
         ContextHolder.setContext(projectId, refId);
         List<Node> nodes;
         String commitToPass = checkCommit(refId, commitId);
         if (commitToPass != null) {
             nodes = nodeDAO.findAll();
         } else {
-            nodes = nodeDAO.findAllByDeleted(false);
+            nodes = nodeDAO.findAllByDeleted(deleted);
         }
         return new ArrayList<>(getNodeGetDomain().processGetJsonFromNodes(nodes, commitToPass).getActiveElementMap().values());
     }
 
 
     @Override
-    public void streamAllAtCommit(String projectId, String refId, String commitId, OutputStream stream, String separator) {
+    public void streamAllAtCommit(String projectId, String refId, String commitId, OutputStream stream, String separator, Boolean deleted) {
         ContextHolder.setContext(projectId, refId);
         List<Node> nodes;
         final String commitToPass = checkCommit(refId, commitId);
         if (commitToPass != null) {
             nodes = nodeDAO.findAll();
         } else {
-            nodes = nodeDAO.findAllByDeleted(false);
+            nodes = nodeDAO.findAllByDeleted(deleted);
         }
         AtomicInteger counter = new AtomicInteger();
         batches(nodes, streamLimit).forEach(ns -> {

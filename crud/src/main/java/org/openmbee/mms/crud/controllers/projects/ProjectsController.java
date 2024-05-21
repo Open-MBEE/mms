@@ -45,7 +45,7 @@ public class ProjectsController extends BaseController {
     }
 
     @GetMapping
-    public ProjectsResponse getAllProjects(Authentication auth, @RequestParam(required = false) String orgId, @RequestParam(required = false, defaultValue = Constants.FALSE) boolean includeArchived) {
+    public ProjectsResponse getAllProjects(Authentication auth, @RequestParam(required = false) String orgId, @RequestParam(required = false, defaultValue = Constants.FALSE) boolean includeArchived, @RequestParam(required = false, defaultValue = Constants.FALSE) boolean includeHomes) {
 
         ProjectsResponse response = new ProjectsResponse();
         Collection<ProjectJson> allProjects =
@@ -54,7 +54,7 @@ public class ProjectsController extends BaseController {
             try {
                 if (mss.hasProjectPrivilege(auth, projectJson.getProjectId(), Privileges.PROJECT_READ.name(), true)
                         && projectJson.getDocId() != null
-                        && (!Constants.TRUE.equals(projectJson.getIsArchived()) || includeArchived)) {
+                        && (!projectJson.isArchived() || includeArchived) && (!projectJson.getId().endsWith(Constants.HOME_SUFFIX) || includeHomes)) {
                     response.getProjects().add(projectJson);
                 }
             } catch(NotFoundException ex) {

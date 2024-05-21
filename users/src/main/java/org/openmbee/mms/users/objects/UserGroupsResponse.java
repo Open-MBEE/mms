@@ -15,10 +15,14 @@ public class UserGroupsResponse {
     @Schema(nullable = true)
     private Collection<String> groups;
 
+    @Schema(defaultValue = "false")
+    private Boolean admin;
+
     public UserGroupsResponse(){}
 
     public UserGroupsResponse(UserJson user, Collection<String> groups){
-        this.user = user.getName();
+        this.user = user.getUsername();
+        this.admin = user.isAdmin();
         this.groups = groups;
     }
 
@@ -36,5 +40,13 @@ public class UserGroupsResponse {
 
     public void setGroups(Collection<String> groups) {
         this.groups = groups;
+    }
+
+    public Boolean isAdmin() {
+        return this.admin;
+    }
+
+    public void setAdmin(Boolean admin) {
+        this.admin = admin;
     }
 }

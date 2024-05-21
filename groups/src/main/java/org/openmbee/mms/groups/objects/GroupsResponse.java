@@ -15,6 +15,10 @@ public class GroupsResponse extends BaseResponse<GroupsResponse> {
         this.groups = new ArrayList<>();
     }
 
+    public GroupsResponse(List<GroupJson> groups) {
+        this.groups = groups;
+    }
+
     public List<GroupJson> getGroups() {
         return this.groups;
     }

@@ -163,22 +163,17 @@ public class LocalGroupsController {
     @PreAuthorize("isAuthenticated()")
     public GroupsResponse getAllGroups(
         Authentication auth) {
-
-        GroupsResponse response = new GroupsResponse();
-        Collection<GroupJson> allGroups = groupPersistence.findAll();
-        for (GroupJson group : allGroups) {
-            if (mss.hasGroupPrivilege(auth, group.getName(), Privileges.GROUP_READ.name(), false)) {
-                response.getGroups().add(group);
-            }
-        }
-        return response;
+        return new GroupsResponse(groupPersistence.findAll().stream().collect(Collectors.toList()));
     }
 
     @GetMapping(value = "/{group}")
-    @PreAuthorize("@mss.hasGroupPrivilege(authentication, #group, 'GROUP_READ', true)")
-    public GroupResponse getGroup(@PathVariable String group) {
-        return new GroupResponse(groupPersistence.findByName(group).orElseThrow(() -> new NotFoundException(GroupConstants.GROUP_NOT_FOUND)),
-            userGroupsPersistence.findUsersInGroup(group).stream().map(UserJson::getUsername).collect(Collectors.toList()));
+    @PreAuthorize("isAuthenticated()")
+    public GroupsResponse getUser(@PathVariable String group) {
+        GroupsResponse res = new GroupsResponse();
+        List<GroupJson> groups = new ArrayList<>();
+        groups.add(groupPersistence.findByName(group).orElseThrow(() -> new NotFoundException(GroupConstants.GROUP_NOT_FOUND)));
+        res.setGroups(groups);
+        return res;
     }
 
     @DeleteMapping("/{group}")
@@ -194,6 +189,13 @@ public class LocalGroupsController {
         }
     }
 
+    @GetMapping(value = "/{group}/users")
+    @PreAuthorize("isAuthenticated()")
+    public GroupResponse getGroupUsers(@PathVariable String group) {
+        return new GroupResponse(groupPersistence.findByName(group).orElseThrow(() -> new NotFoundException(GroupConstants.GROUP_NOT_FOUND)),
+            userGroupsPersistence.findUsersInGroup(group).stream().map(UserJson::getUsername).collect(Collectors.toList()));
+    }
+    
     @PostMapping("/{group}/users")
     @PreAuthorize("@mss.hasGroupPrivilege(authentication, #group, 'GROUP_EDIT', true)")
     public GroupUpdateResponse updateGroupUsers(@PathVariable String group,

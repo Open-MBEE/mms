@@ -6,6 +6,7 @@ import org.openmbee.mms.data.dao.*;
 import org.openmbee.mms.core.exceptions.BadRequestException;
 import org.openmbee.mms.core.exceptions.InternalErrorException;
 import org.openmbee.mms.core.services.NodeGetInfo;
+import org.openmbee.mms.crud.CrudConstants;
 import org.openmbee.mms.crud.domain.NodeGetDomain;
 import org.openmbee.mms.data.domains.scoped.Branch;
 import org.openmbee.mms.data.domains.scoped.Commit;
@@ -119,9 +120,11 @@ public class FederatedNodeGetDomain extends NodeGetDomain {
                 continue;
             }
             if (federatedInfo.getExistingNodeMap().get(nodeId).isDeleted()) {
+                indexElement.setIsArchived(true);
                 rejectDeleted(info, nodeId, indexElement);
                 continue;
             }
+            indexElement.setIsArchived(false);
             info.getActiveElementMap().put(nodeId, indexElement);
         }
         return info;
@@ -171,12 +174,15 @@ public class FederatedNodeGetDomain extends NodeGetDomain {
             Instant created = Instant.from(Formats.FORMATTER.parse(indexElement.getCreated()));
 
             if (commitId.equals(indexElement.getCommitId())) { //exact match
+                indexElement.setIsArchived(false);
                 addActiveElement(info, nodeId, indexElement);
             } else if (created.isAfter(time)) { // element created after commit
                 rejectNotFound(info, nodeId);
             } else if (modified.isAfter(time)) { // latest element is after commit
                 Optional<ElementJson> tryExact = nodeIndex.getByCommitId(commitId, nodeId);
                 if (tryExact.isPresent()) {
+                    ElementJson tryJson = tryExact.get();
+                    tryJson.setIsArchived(tryJson.get(CrudConstants.DELETED) == null ? false : (Boolean) tryJson.get(CrudConstants.DELETED));
                     addActiveElement(info, nodeId, tryExact.get());
                     continue; // found exact match at commit
                 }
@@ -187,10 +193,13 @@ public class FederatedNodeGetDomain extends NodeGetDomain {
                     Formats.FORMATTER.format(time), refCommitIds);
                 if (e.isPresent()) { // found version of element at commit time
                     Instant realModified = Instant.from(Formats.FORMATTER.parse(e.get().getModified()));
+                    ElementJson elementJson = e.get();
                     if (elementDeleted(nodeId, commitId, time, realModified, refCommitIds)) {
-                        rejectDeleted(info, nodeId, e.get());
+                        elementJson.setIsArchived(true);
+                        rejectDeleted(info, nodeId, elementJson);
                     } else {
-                        addActiveElement(info, nodeId, e.get());
+                        elementJson.setIsArchived(false);
+                        addActiveElement(info, nodeId, elementJson);
                     }
                 } else {
                     rejectNotFound(info, nodeId); // element not found at commit time
@@ -200,11 +209,14 @@ public class FederatedNodeGetDomain extends NodeGetDomain {
                     refCommitIds = getRefCommitIds(time);
                 }
                 if (elementDeleted(nodeId, commitId, time, modified, refCommitIds)) {
+                    indexElement.setIsArchived(true);
                     rejectDeleted(info, nodeId, indexElement);
                 } else {
+                    indexElement.setIsArchived(false);
                     addActiveElement(info, nodeId, indexElement);
                 }
             } else { // latest element version is version at commit, not deleted
+                indexElement.setIsArchived(false);
                 addActiveElement(info, nodeId, indexElement);
             }
         }

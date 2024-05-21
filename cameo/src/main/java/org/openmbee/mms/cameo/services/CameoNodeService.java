@@ -96,7 +96,7 @@ public class CameoNodeService extends DefaultNodeService implements Hierarchical
             boolean restrictOnPermissions) {
         saw.add(Pair.of(projectId, refId));
         List<ElementJson> mounts = getNodePersistence().findAllByNodeType(projectId, refId, commitId,
-            CameoNodeType.PROJECTUSAGE.getValue());
+            CameoNodeType.PROJECTUSAGE.getValue(), false);
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         List<MountJson> mountValues = new ArrayList<>();

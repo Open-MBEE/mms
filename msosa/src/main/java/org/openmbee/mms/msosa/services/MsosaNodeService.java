@@ -83,7 +83,7 @@ public class MsosaNodeService extends DefaultNodeService implements Hierarchical
             boolean restrictOnPermissions) {
         ContextHolder.setContext(projectId, refId);
         saw.add(Pair.of(projectId, refId));
-        List<ElementJson> mountsJson = nodePersistence.findAllByNodeType(projectId,refId,commitId,MsosaNodeType.PROJECTUSAGE.getValue());
+        List<ElementJson> mountsJson = nodePersistence.findAllByNodeType(projectId,refId,commitId,MsosaNodeType.PROJECTUSAGE.getValue(), false);
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         List<MountJson> mountValues = new ArrayList<>();
 

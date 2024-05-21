@@ -16,9 +16,11 @@ import org.openmbee.mms.core.dao.OrgPersistence;
 import org.openmbee.mms.core.objects.OrganizationsRequest;
 import org.openmbee.mms.core.objects.OrganizationsResponse;
 import org.openmbee.mms.core.objects.Rejection;
+import org.openmbee.mms.core.services.ProjectService;
 import org.openmbee.mms.crud.CrudConstants;
 import org.openmbee.mms.crud.controllers.BaseController;
 import org.openmbee.mms.crud.services.OrgDeleteService;
+import org.openmbee.mms.crud.services.ProjectDeleteService;
 import org.openmbee.mms.core.exceptions.BadRequestException;
 import org.openmbee.mms.core.exceptions.NotFoundException;
 import org.openmbee.mms.json.OrgJson;
@@ -45,6 +47,8 @@ public class OrgsController extends BaseController {
 
     OrgDeleteService orgDeleteService;
 
+    ProjectDeleteService projectDeleteService;
+
     @Autowired
     public OrgsController(OrgPersistence organizationRepository) {
         this.organizationRepository = organizationRepository;
@@ -55,6 +59,11 @@ public class OrgsController extends BaseController {
         this.orgDeleteService = orgDeleteService;
     }
 
+    @Autowired
+    public void setProjectDeleteService(ProjectDeleteService projectDeleteService) {
+        this.projectDeleteService = projectDeleteService;
+    }
+
     @GetMapping
     public OrganizationsResponse getAllOrgs(@RequestParam(required = false, defaultValue = Constants.FALSE) boolean includeArchived, Authentication auth) {
 
@@ -62,7 +71,7 @@ public class OrgsController extends BaseController {
         Collection<OrgJson> allOrgs = organizationRepository.findAll();
         for (OrgJson org : allOrgs) {
             if (mss.hasOrgPrivilege(auth, org.getId(), Privileges.ORG_READ.name(), true) 
-                && (!Constants.TRUE.equals(org.getIsArchived()) || includeArchived)) {
+                && (!org.isArchived() || includeArchived)) {
                 response.getOrgs().add(org);
             }
         }
@@ -119,19 +128,31 @@ public class OrgsController extends BaseController {
                     org.setCreator(auth.getName());
                 }
             }
-            if (org.getIsArchived() != null && !org.getIsArchived().equals(o.getIsArchived())) {
-                List<ProjectJson> orgProjs = projectPersistence.findAllByOrgId(org.getId()).stream().collect(Collectors.toList());
-                //Un/Archive all projects contained by org
-                for (ProjectJson proj: orgProjs) {
-                    proj.setIsArchived(org.getIsArchived());
-                    projectPersistence.update(proj);
-                }
-            }
             logger.info("Saving organization: {}", org.getId());
             OrgJson saved = organizationRepository.save(org);
             if (newOrg) {
+                // Initialize Org Permissions
                 permissionService.initOrgPerms(org.getId(), auth.getName());
+
+                createOrgHome(org);
+            } else {
+                Collection<ProjectJson> orgProjs = projectPersistence.findAllByOrgId(org.getId());
+                if (!orgProjs.stream().map(ProjectJson::getId).collect(Collectors.toList()).contains(org.getId() + Constants.HOME_SUFFIX)) {
+                    if (org.isArchived() == null) {
+                        org.setIsArchived(o.isArchived());
+                    }
+                    createOrgHome(org);
+                }
+                for (ProjectJson proj: orgProjs) {
+                    if (org.isArchived() != null && !org.isArchived().equals(o.isArchived())) {
+                        //Un/Archive all projects contained by org
+                    
+                        proj.setIsArchived(org.isArchived());
+                        projectPersistence.update(proj);
+                    }
+                }
             }
+            
             response.getOrgs().add(saved);
         }
         if (orgPost.getOrgs().size() == 1) {
@@ -151,10 +172,46 @@ public class OrgsController extends BaseController {
         if (!orgOption.isPresent()) {
             throw new NotFoundException(response.addMessage("Organization not found."));
         }
-        if (!projectPersistence.findAllByOrgId(orgId).isEmpty() && hard) {
-            throw new BadRequestException(response.addMessage("Cannot Hard Delete Organization that contains Projects"));
+        if (hard) {
+            List<ProjectJson> orgProjs = projectPersistence.findAllByOrgId(orgId).stream().collect(Collectors.toList());
+            if (!orgProjs.isEmpty()) {
+                if (orgProjs.size() == 1 && orgProjs.get(0).getId().equals(orgId + Constants.HOME_SUFFIX)) {
+                    projectDeleteService.deleteProject(orgId + Constants.HOME_SUFFIX, hard);
+                } else {
+                    throw new BadRequestException(response.addMessage("Cannot Hard Delete Organization that contains Projects other than its home"));
+                }
+            }
         }
-        
         return orgDeleteService.deleteOrg(orgId, hard);
+    }
+
+    private ProjectJson createOrgHome(OrgJson org) {
+        // Create New Org "Home" Project
+        ProjectJson homeProj = new ProjectJson();
+        homeProj.setCreated(org.getCreated());
+        homeProj.setType(CrudConstants.PROJECT);
+        homeProj.setCreator(org.getCreator());
+        homeProj.setId(org.getId() + Constants.HOME_SUFFIX);
+        homeProj.setOrgId(org.getId());
+        homeProj.setIsArchived(org.isArchived());
+        homeProj.setName((!org.getName().isEmpty() ? org.getName() : org.getId()) + " Home");
+
+        ProjectService ps = getProjectService(homeProj);
+        ProjectJson savedProj = ps.create(homeProj);
+        permissionService.initProjectPerms(homeProj.getId(), true, org.getCreator());
+        return savedProj;
+    }
+
+    private ProjectService getProjectService(ProjectJson json) {
+        String type = json.getProjectType();
+        if (type == null || type.isEmpty()) {
+            try {
+                type = this.getProjectType(json.getProjectId());
+            } catch (NotFoundException e) {
+                type = CrudConstants.DEFAULT;
+            }
+            json.setProjectType(type);
+        }
+        return serviceFactory.getProjectService(type);
     }
 }

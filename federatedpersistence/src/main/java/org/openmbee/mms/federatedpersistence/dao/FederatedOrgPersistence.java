@@ -40,8 +40,8 @@ public class FederatedOrgPersistence implements OrgPersistence {
         Organization organization = organizationOptional.orElse(new Organization());
         organization.setOrganizationId(orgJson.getId());
         organization.setOrganizationName(orgJson.getName());
-        if (orgJson.getIsArchived() != null) {
-            organization.setDeleted(Boolean.parseBoolean(orgJson.getIsArchived()));
+        if (orgJson.isArchived() != null) {
+            organization.setDeleted(orgJson.isArchived());
         }
         return getOrgJson(orgDAO.save(organization));
     }
@@ -92,7 +92,7 @@ public class FederatedOrgPersistence implements OrgPersistence {
     protected OrgJson getOrgJson(Organization organization) {
         OrgJson orgJson = new OrgJson();
         orgJson.merge(jsonUtils.convertToMap(organization));
-        orgJson.setIsArchived(String.valueOf(organization.isDeleted()));
+        orgJson.setIsArchived(organization.isDeleted());
         orgJson.remove(OrgJson.DELETED);
         return orgJson;
     }

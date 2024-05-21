@@ -73,7 +73,7 @@ public class OrgDeleteService {
                 projectDeleteService.deleteProject(proj.getId(), false);
             }
             orgPersistence.archiveById(orgId);
-            orgJson.setIsArchived(Constants.TRUE);
+            orgJson.setIsArchived(true);
         }
 
         

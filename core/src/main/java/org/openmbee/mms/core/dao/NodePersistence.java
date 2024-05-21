@@ -23,13 +23,13 @@ public interface NodePersistence {
 
     NodeGetInfo findById(String projectId, String refId, String commitId, String elementId);
 
-    List<ElementJson> findAllByNodeType(String projectId, String refId, String commitId, int nodeType);
+    List<ElementJson> findAllByNodeType(String projectId, String refId, String commitId, int nodeType, Boolean deleted);
 
     NodeGetInfo findAll(String projectId, String refId, String commitId, List<ElementJson> elements);
 
-    List<ElementJson> findAll(String projectId, String refId, String commitId);
+    List<ElementJson> findAll(String projectId, String refId, String commitId, Boolean deleted);
 
-    void streamAllAtCommit(String projectId, String refId, String commitId, OutputStream outputStream, String separator);
+    void streamAllAtCommit(String projectId, String refId, String commitId, OutputStream outputStream, String separator, Boolean deleted);
 
     void branchElements(RefJson parentBranch, CommitJson parentCommit, RefJson targetBranch);
 }

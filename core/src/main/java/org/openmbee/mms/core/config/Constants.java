@@ -24,6 +24,8 @@ public class Constants {
     public static final String FALSE = "false";
     public static final String LIMIT = "limit";
 
+    public static final String HOME_SUFFIX = "-home";
+
     public static final String MASTER_BRANCH = "master";
 
     public static final Pattern BRANCH_ID_VALID_PATTERN = Pattern.compile("^[\\w-]+$");

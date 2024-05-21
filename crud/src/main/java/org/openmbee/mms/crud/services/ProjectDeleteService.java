@@ -54,7 +54,7 @@ public class ProjectDeleteService {
             projectJson.setDeleted(true);
         } else {
             projectPersistence.archiveById(projectId);
-            projectJson.setIsArchived(Constants.TRUE);
+            projectJson.setIsArchived(true);
         }
 
         

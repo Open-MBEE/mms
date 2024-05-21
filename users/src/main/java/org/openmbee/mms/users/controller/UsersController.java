@@ -72,7 +72,7 @@ public class UsersController {
         return res;
     }
 
-    @GetMapping(value = "/users/:username")
+    @GetMapping(value = "/users/{username}")
     @PreAuthorize("isAuthenticated()")
     public UsersResponse getUser(@PathVariable String username) {
         UsersResponse res = new UsersResponse();
@@ -83,7 +83,7 @@ public class UsersController {
         return res;
     }
 
-    @GetMapping(value = "/users/:username/groups")
+    @GetMapping(value = "/users/{username}/groups")
     @PreAuthorize("isAuthenticated()")
     public UserGroupsResponse getUserGroups(@PathVariable String username) {
         return new UserGroupsResponse(usersDetailsService.loadUserByUsername(username).getUser(), userGroupsPersistence.findGroupsAssignedToUser(username).stream().map(GroupJson::getName).collect(Collectors.toList()));

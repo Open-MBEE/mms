@@ -63,7 +63,7 @@ public class DefaultProjectService implements ProjectService {
         try {
             //TODO Transaction start
             ProjectJson savedProjectJson = projectPersistence.save(project);
-            savedProjectJson.setIsArchived("false");
+            savedProjectJson.setIsArchived(false);
             //create and save master branch. We're combining operations with the branch unifiedDAO.
             branchPersistence.save(createMasterRefJson(savedProjectJson));
             //TODO Transaction commit
@@ -112,7 +112,7 @@ public class DefaultProjectService implements ProjectService {
         branchJson.setCreated(project.getCreated());
         branchJson.setProjectId(project.getId());
         branchJson.setCreator(project.getCreator());
-        branchJson.setIsArchived("false");
+        branchJson.setIsArchived(false);
         return branchJson;
     }
 }

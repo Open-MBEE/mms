@@ -65,7 +65,7 @@ public class FederatedProjectPersistence implements ProjectPersistence {
                 Project project = projectOption.get();
                 ContextHolder.setContext(project.getProjectId());
                 ProjectJson projectJson = projectIndexDAO.findById(project.getDocId()).orElse(null);
-                projectJson.setIsArchived(String.valueOf(project.isDeleted()));
+                projectJson.setIsArchived(project.isDeleted());
                 return projectJson;
             }
             return null;
@@ -78,7 +78,7 @@ public class FederatedProjectPersistence implements ProjectPersistence {
 
             ContextHolder.setContext(project.getProjectId());
             ProjectJson projectJson = projectIndexDAO.findById(project.getDocId()).orElse(null);
-            projectJson.setIsArchived(String.valueOf(project.isDeleted()));
+            projectJson.setIsArchived(project.isDeleted());
             return projectJson;
         }).filter(Objects::nonNull).collect(Collectors.toList());
     }
@@ -96,7 +96,7 @@ public class FederatedProjectPersistence implements ProjectPersistence {
         return org.get().getProjects().stream().map(project -> {
             ContextHolder.setContext(project.getProjectId());
             ProjectJson projectJson = projectIndexDAO.findById(project.getDocId()).orElse(null);
-            projectJson.setIsArchived(String.valueOf(project.isDeleted()));
+            projectJson.setIsArchived(project.isDeleted());
             return projectJson;
         }).filter(Objects::nonNull).collect(Collectors.toList());
     }
@@ -159,7 +159,7 @@ public class FederatedProjectPersistence implements ProjectPersistence {
         projectDAO.save(p);
 
         ProjectJson projectJson = projectJsonOption.get();
-        projectJson.setIsArchived(Constants.TRUE);
+        projectJson.setIsArchived(true);
 
         ContextHolder.setContext(projectId);
         projectIndexDAO.update(projectJson);
@@ -184,7 +184,7 @@ public class FederatedProjectPersistence implements ProjectPersistence {
         proj.setOrganization(org.get());
         proj.setProjectType(projectJson.getProjectType());
         proj.setDocId(projectJson.getDocId());
-        proj.setDeleted(Boolean.parseBoolean(projectJson.getIsArchived()));
+        proj.setDeleted(projectJson.isArchived());
 
         try {
             projectDAO.save(proj);
@@ -219,14 +219,14 @@ public class FederatedProjectPersistence implements ProjectPersistence {
                     throw new BadRequestException("Invalid organization");
                 }
             }
-            if (projectJson.getIsArchived() != null && !projectJson.getIsArchived().isEmpty()) {
-                proj.setDeleted(Boolean.parseBoolean(projectJson.getIsArchived()));
+            if (projectJson.isArchived() != null) {
+                proj.setDeleted(projectJson.isArchived());
             }   
             projectJson.setDocId(proj.getDocId());
             
            
             projectDAO.save(proj);
-            projectJson.setIsArchived(String.valueOf(proj.isDeleted()));
+            projectJson.setIsArchived(proj.isDeleted());
             ContextHolder.setContext(projectJson.getProjectId());
             return projectIndexDAO.update(projectJson);
         }

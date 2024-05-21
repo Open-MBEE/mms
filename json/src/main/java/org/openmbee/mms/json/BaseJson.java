@@ -22,7 +22,7 @@ public class BaseJson<T> extends HashMap<String, Object> {
     public static final String CREATED = "_created";
     public static final String COMMITID = "_commitId";
     public static final String TYPE = "type";
-    public static final String IS_ARCHIVED = "_archived";
+    public static final String IS_ARCHIVED = "archived";
 
     public String getId() {
         return (String) this.get(ID);
@@ -159,13 +159,13 @@ public class BaseJson<T> extends HashMap<String, Object> {
     }
 
     @JsonProperty(IS_ARCHIVED)
-    public String getIsArchived() {
-        return (String) this.get(IS_ARCHIVED) == null ? null : String.valueOf(this.get(IS_ARCHIVED));
+    public Boolean isArchived() {
+        return this.get(IS_ARCHIVED) == null ? null : (Boolean) this.get(IS_ARCHIVED);
     }
 
     @SuppressWarnings("unchecked")
     @JsonProperty(IS_ARCHIVED)
-    public T setIsArchived(String archived) {
+    public T setIsArchived(Boolean archived) {
         this.put(IS_ARCHIVED, archived);
         return (T) this;
     }

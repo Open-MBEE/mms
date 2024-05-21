@@ -22,7 +22,7 @@ public class DefaultNodeUpdateFilter implements NodeUpdateFilter {
     @Override
     public boolean filterUpdate(NodeChangeInfo info, ElementJson updated, ElementJson existing) {
         if (!info.getOverwrite()) {
-            if (Constants.TRUE.equals(existing.getIsArchived()) || isUpdated(updated, existing, info)) {
+            if ((existing.isArchived() != null && existing.isArchived()) || isUpdated(updated, existing, info)) {
                 return diffUpdateJson(updated, existing, info);
             } else {
                 return false;
