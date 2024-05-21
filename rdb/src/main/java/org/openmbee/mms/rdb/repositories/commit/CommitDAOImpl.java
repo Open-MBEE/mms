@@ -154,10 +154,11 @@ public class CommitDAOImpl extends BaseDAOImpl implements CommitDAO {
             List<Commit> next = findByRefAndLimit(currentRef, currentCid, timestamp, currentLimit);
             commits.addAll(next);
 
+            String oldRef = currentRef;
             currentRef = ref.getParentRefId();
             currentCid = ref.getParentCommit();
 
-            if (currentRef == null || currentRef.equals(Constants.MASTER_BRANCH)) {
+            if (currentRef == null || (currentRef.equals(Constants.MASTER_BRANCH) && oldRef.equals(Constants.MASTER_BRANCH))) {
                 break;
             }
             Optional<Branch> parent = branchRepository.findByBranchId(currentRef);
