@@ -13,6 +13,7 @@ import org.openmbee.mms.core.services.NodeChangeInfo;
 import org.openmbee.mms.core.services.NodeGetInfo;
 import org.openmbee.mms.core.services.NodeService;
 import org.openmbee.mms.crud.CrudConstants;
+import org.openmbee.mms.crud.config.OptimizationConfig;
 import org.openmbee.mms.json.BaseJson;
 import org.openmbee.mms.json.CommitJson;
 import org.openmbee.mms.json.ElementJson;
@@ -36,6 +37,7 @@ public class DefaultNodeService implements NodeService {
     protected NodePersistence nodePersistence;
 
     protected Collection<EventService> eventPublisher;
+    protected OptimizationConfig optimizationConfig;
 
     @Autowired
     public void setCommitPersistence(CommitPersistence commitPersistence) {
@@ -56,12 +58,16 @@ public class DefaultNodeService implements NodeService {
         this.eventPublisher = eventPublisher;
     }
 
+    @Autowired
+    public void setOptimizationConfig(OptimizationConfig optimizationConfig) {
+        this.optimizationConfig = optimizationConfig;
+    }
     @Override
     public void readAsStream(String projectId, String refId, Map<String, String> params, OutputStream stream,
             String accept) throws IOException {
 
         String commitId = params.getOrDefault(CrudConstants.COMMITID, null);
-
+        String resCommitId = commitId;
         if (commitId != null && !commitId.isEmpty()) {
             if (!commitPersistence.findById(projectId, commitId).isPresent()) {
                 throw new BadRequestException("commit id is invalid");
@@ -71,12 +77,14 @@ public class DefaultNodeService implements NodeService {
             if (!commitJson.isPresent()) {
                 throw new InternalErrorException("Could not find latest commit for project and ref");
             }
-            commitId = commitJson.get().getId();
+            resCommitId = commitJson.get().getId();
+            if (!optimizationConfig.isOptimizeForFederated()) {
+                commitId = resCommitId;
+            }
         }
-
         String separator = "\n";
         if (!"application/x-ndjson".equals(accept)) {
-            String intro = "{\"commitId\":\"" + commitId + "\",\"elements\":[";
+            String intro = "{\"commitId\":\"" + resCommitId + "\",\"elements\":[";
             stream.write(intro.getBytes(StandardCharsets.UTF_8));
             separator = ",";
         }
@@ -100,12 +108,16 @@ public class DefaultNodeService implements NodeService {
             return read(projectId, refId, req, params);
         }
         String commitId = params.getOrDefault(CrudConstants.COMMITID, null);
+        String resCommitId = commitId;
         if (commitId == null) {
             Optional<CommitJson> commitJson = commitPersistence.findLatestByProjectAndRef(projectId, refId);
             if (!commitJson.isPresent()) {
                 throw new InternalErrorException("Could not find latest commit for project and ref");
             }
-            commitId = commitJson.get().getId();
+            resCommitId = commitJson.get().getId();
+            if (!optimizationConfig.isOptimizeForFederated()) {
+                commitId = resCommitId;
+            }
         }
         // If no id is provided, return all
         ElementsResponse response = new ElementsResponse();
@@ -114,7 +126,7 @@ public class DefaultNodeService implements NodeService {
         List<ElementJson> nodes = nodePersistence.findAll(projectId, refId, commitId);
         response.getElements().addAll(nodes);
         response.getElements().forEach(v -> v.setRefId(refId));
-        response.setCommitId(commitId);
+        response.setCommitId(resCommitId);
         return response;
     }
 
@@ -123,12 +135,16 @@ public class DefaultNodeService implements NodeService {
         Map<String, String> params) {
 
         String commitId = params.getOrDefault(CrudConstants.COMMITID, null);
+        String resCommitId = commitId;
         if (commitId == null) {
             Optional<CommitJson> commitJson = commitPersistence.findLatestByProjectAndRef(projectId, refId);
             if (!commitJson.isPresent()) {
                 throw new InternalErrorException("Could not find latest commit for project and ref");
             }
-            commitId = commitJson.get().getId();
+            resCommitId = commitJson.get().getId();
+            if (!optimizationConfig.isOptimizeForFederated()) {
+                commitId = resCommitId;
+            }
         }
 
         NodeGetInfo info = nodePersistence.findAll(projectId, refId, commitId, req.getElements());
@@ -137,7 +153,7 @@ public class DefaultNodeService implements NodeService {
         response.getElements().addAll(info.getActiveElementMap().values());
         response.getElements().forEach(v -> v.setRefId(refId));
         response.setRejected(new ArrayList<>(info.getRejected().values()));
-        response.setCommitId(commitId);
+        response.setCommitId(resCommitId);
         return response;
     }
 

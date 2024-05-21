@@ -3,6 +3,7 @@ mms.admin.username=test
 mms.admin.password=test
 
 mms.stream.batch.size=100000
+mms.optimize-for-federated=true
 
 #Comma Separated list of allowed cross site origins
 cors.allowed.origins=*
