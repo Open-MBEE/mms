@@ -2,7 +2,7 @@ buildscript {
     dependencies {
         classpath "org.springframework.boot:spring-boot-gradle-plugin:$springBootVersion"
         classpath "org.jfrog.buildinfo:build-info-extractor-gradle:latest.release"
-        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.4'
+        classpath "io.spring.gradle:dependency-management-plugin:1.1.5"
     }
     repositories {
         mavenCentral()
@@ -36,7 +36,8 @@ ext {
         'jjwt-api'                      : "io.jsonwebtoken:jjwt-api:$jwtTokenVersion",
         'jjwt-impl'                     : "io.jsonwebtoken:jjwt-impl:$jwtTokenVersion",
         'jjwt-jackson'                  : "io.jsonwebtoken:jjwt-jackson:$jwtTokenVersion",
-        'spring-boot-starter-test'      : 'org.springframework.boot:spring-boot-starter-test:2.2.4.RELEASE'
+        'spring-boot-starter-test'      : 'org.springframework.boot:spring-boot-starter-test:2.2.4.RELEASE',
+        'spring-cloud-azure'            : "com.azure.spring:spring-cloud-azure-dependencies:$azureBomVersion"
     ]
 }
 

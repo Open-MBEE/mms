@@ -1,4 +1,11 @@
+storage.provider=s3
 s3.access_key=test
 s3.secret_key=test
 s3.region=somewhere
 s3.bucket=optional
+
+## Use Azure Blob Storage
+#storage.provider=azureBlob
+#spring.cloud.azure.storage.blob.account-name=test
+#spring.cloud.azure.storage.blob.account-key=test
+#spring.cloud.azure.storage.blob.endpoint=test

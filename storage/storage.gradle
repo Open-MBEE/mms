@@ -1,8 +1,22 @@
+plugins {
+    id "io.spring.dependency-management"
+}
+
+apply plugin: 'io.spring.dependency-management'
+
+dependencyManagement {
+    imports {
+        mavenBom commonDependencies.'spring-cloud-azure'
+    }
+}
+
 dependencies {
     api project(':artifacts')
 
     implementation 'com.amazonaws:aws-java-sdk-s3:1.12.638'
+    implementation 'com.azure.spring:spring-cloud-azure-starter-storage-blob'
     implementation 'org.apache.tika:tika-core:2.9.1'
+
     implementation commonDependencies.'servlet-api'
 
     testImplementation commonDependencies.'spring-boot-starter-test'

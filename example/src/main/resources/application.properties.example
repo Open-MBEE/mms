@@ -85,8 +85,15 @@ springdoc.swagger-ui.tagsSorter=alpha
 springdoc.default-produces-media-type=application/json
 springdoc.swagger-ui.displayOperationId=true
 
+storage.provider=s3
 s3.endpoint=http://localhost:9000
 s3.access_key=admintest
 s3.secret_key=admintest
 s3.region=optional
 s3.bucket=optional
+
+## Use Azure Blob Storage
+#storage.provider=azureBlob
+#spring.cloud.azure.storage.blob.account-name=test
+#spring.cloud.azure.storage.blob.account-key=test
+#spring.cloud.azure.storage.blob.endpoint=test

@@ -14,23 +14,18 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.util.Date;
 import java.util.Optional;
-import org.apache.tika.mime.MimeTypes;
-import org.openmbee.mms.artifacts.storage.ArtifactStorage;
 import org.openmbee.mms.core.exceptions.InternalErrorException;
 import org.openmbee.mms.core.exceptions.NotFoundException;
 import org.openmbee.mms.json.ElementJson;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Component;
 
 @Component
-public class S3Storage implements ArtifactStorage {
-
-    private final Logger logger = LoggerFactory.getLogger(getClass());
+@Conditional(S3StorageCondition.class)
+public class S3Storage extends AbstractArtifactStorage {
 
     private AmazonS3 s3Client;
 
@@ -49,8 +44,6 @@ public class S3Storage implements ArtifactStorage {
     @Value("${s3.bucket:#{null}}")
     private Optional<String> BUCKET;
 
-
-    private MimeTypes mimeTypes = MimeTypes.getDefaultMimeTypes();
 
     private AmazonS3 getClient() {
         if (s3Client == null) {
@@ -109,21 +102,6 @@ public class S3Storage implements ArtifactStorage {
         return location;
     }
 
-    private String buildLocation(ElementJson element, String mimetype) {
-        Date today = new Date();
-        return String.format("%s/%s/%s/%d", element.getProjectId(), element.getId(), getExtension(mimetype), today.getTime());
-    }
-
-    private String getExtension(String mime) {
-        String extension = "";
-        try {
-            extension = mimeTypes.forName(mime).getExtension().substring(1);
-        } catch (Exception e) {
-            logger.error("Error getting extension: ", e);
-        }
-        return extension;
-    }
-
     private String getBucket() {
         String bucket = "mms";
         if (BUCKET.isPresent()) {
@@ -131,4 +109,6 @@ public class S3Storage implements ArtifactStorage {
         }
         return bucket;
     }
+
+    
 }
