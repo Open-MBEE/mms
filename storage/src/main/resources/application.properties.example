@@ -9,3 +9,4 @@ s3.bucket=optional
 #spring.cloud.azure.storage.blob.account-name=test
 #spring.cloud.azure.storage.blob.account-key=test
 #spring.cloud.azure.storage.blob.endpoint=test
+#spring.cloud.azure.storage.blob.container-name=test-container
