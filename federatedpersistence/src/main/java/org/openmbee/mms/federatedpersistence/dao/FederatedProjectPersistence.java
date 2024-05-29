@@ -184,7 +184,10 @@ public class FederatedProjectPersistence implements ProjectPersistence {
         proj.setOrganization(org.get());
         proj.setProjectType(projectJson.getProjectType());
         proj.setDocId(projectJson.getDocId());
-        proj.setDeleted(projectJson.isArchived());
+
+        if (projectJson.isArchived() != null) {
+            proj.setDeleted(projectJson.isArchived());
+        } 
 
         try {
             projectDAO.save(proj);
