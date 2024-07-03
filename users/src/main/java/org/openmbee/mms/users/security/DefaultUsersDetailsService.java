@@ -99,10 +99,8 @@ public abstract class DefaultUsersDetailsService implements UsersDetailsService<
         ) {
             user.setLastName(req.getLastName());
         }
-        if (req.isEnabled() != null && user.isEnabled() != req.isEnabled())
-
-        if (req.getType() != null) {
-            user.setType(req.getType());
+        if (req.isEnabled() != null && user.isEnabled() != req.isEnabled()){
+            user.setEnabled(req.isEnabled());
         }
         return saveUser(user);
     }

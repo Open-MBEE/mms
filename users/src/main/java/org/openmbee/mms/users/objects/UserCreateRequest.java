@@ -63,10 +63,6 @@ public class UserCreateRequest implements Serializable {
         this.admin = admin;
     }
 
-    public String getType() {
-        return this.type;
-    }
-
     public void setType(String type) {
         this.type = type;
     }

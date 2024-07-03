@@ -107,7 +107,7 @@ public class LdapUsersDetailsService extends DefaultUsersDetailsService {
         }
 
         UserJson user = userOptional.get();
-        if (user.getType() == LocalUsersDetailsService.TYPE) {
+        if (user.getPassword() != null || !user.getPassword().isBlank()) {
             super.changeUserPassword(username, password, asAdmin);
         } else {
             throw new BadRequestException("Unable to change passwords for non-local users");
@@ -157,7 +157,7 @@ public class LdapUsersDetailsService extends DefaultUsersDetailsService {
             userJson = saveUser(getUser(username));
         } else {
             userJson = user.get();
-            if (user.get().getType().equals(LdapUsersDetailsService.TYPE) && userJson.getModified() != null && Instant.parse(userJson.getModified()).isBefore(Instant.now().minus(userAttributesUpdate, ChronoUnit.HOURS))) {
+            if ((userJson.getPassword() == null || userJson.getPassword().isBlank()) && userJson.getModified() != null && Instant.parse(userJson.getModified()).isBefore(Instant.now().minus(userAttributesUpdate, ChronoUnit.HOURS))) {
                 userJson = saveUser(getUser(username));
             }
         }
@@ -184,7 +184,6 @@ public class LdapUsersDetailsService extends DefaultUsersDetailsService {
         user.setUsername(username);
         user.setEnabled(true);
         user.setAdmin(false);
-        user.setType(LdapUsersDetailsService.TYPE);
         user.setPassword(null);
         return update(userData, user);
     }
@@ -204,7 +203,13 @@ public class LdapUsersDetailsService extends DefaultUsersDetailsService {
         HardcodedFilter groupsFilter = new HardcodedFilter(
             "(" + groupSearchFilter.replace("{0}", LdapEncoder.filterEncode(userDn)) + ")");
         andFilter.and(groupsFilter);
-        andFilter.and(orFilter);
+        if (!orFilter.encode().isEmpty()) {
+            logger.debug("LDAP Filter Query: " + orFilter.encode());
+            andFilter.and(orFilter);
+        } else {
+            logger.debug("Empty Filter");
+        }
+        
         String filter = andFilter.encode();
         Set<String> allGroups = ldapTemplate
         .searchForSingleAttributeValues(groupSearchBase, orFilter.encode(), new Object[]{""}, groupRoleAttribute);
