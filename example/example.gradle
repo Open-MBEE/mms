@@ -13,6 +13,12 @@ apply plugin: 'eclipse'
 apply plugin: 'org.springframework.boot'
 apply plugin: 'io.spring.dependency-management'
 
+dependencyManagement {
+    imports {
+        mavenBom commonDependencies.'spring-cloud-azure'
+    }
+}
+
 dependencies {
     implementation(
         project(':authenticator'),
