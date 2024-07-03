@@ -2,6 +2,7 @@ package org.openmbee.mms.twc;
 
 public enum TeamworkCloudEndpoints {
     LOGIN("login"),
+    GETUSER("admin/users/%s"),
     GETROLESID("resources/%s/roles"),
     GETPROJECTUSERS("resources/%s/roles/%s/users");
 

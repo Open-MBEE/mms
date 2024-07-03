@@ -99,6 +99,9 @@ public class CameoConstants {
     public static final String PACKAGE_TYPE = "Package";
     public static final String PUBLIC_VISIBILITY = "public";
 
+    
+    public static final String PROJECT_MODEL_SUFFIX = "_pm";
+
     public static final Map<String, String> STEREOTYPEIDS;
     static {
         STEREOTYPEIDS = new HashMap<>();

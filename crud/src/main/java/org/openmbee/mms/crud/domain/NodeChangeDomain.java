@@ -56,6 +56,7 @@ public abstract class NodeChangeDomain extends JsonDomain {
 
         element.setCreator(commitJson.getCreator()); //Only set on creation of new element
         element.setCreated(commitJson.getCreated());
+        element.setIsArchived(false);
     }
 
     public boolean processElementUpdated(NodeChangeInfo info, ElementJson element, ElementJson existing) {

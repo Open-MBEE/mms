@@ -9,6 +9,7 @@ import org.openmbee.mms.core.objects.ElementsRequest;
 import org.openmbee.mms.core.objects.ElementsResponse;
 import org.openmbee.mms.core.objects.Rejection;
 import org.openmbee.mms.core.services.NodeChangeInfo;
+import org.openmbee.mms.crud.CrudConstants;
 import org.openmbee.mms.crud.domain.JsonDomain;
 import org.openmbee.mms.json.ElementJson;
 import org.openmbee.mms.crud.services.DefaultNodeService;
@@ -31,10 +32,11 @@ public class JupyterNodeService extends DefaultNodeService implements NodeServic
     }
 
     public ElementsResponse readNotebooks(String projectId, String refId, String elementId, Map<String, String> params) {
+        Boolean deleted = Boolean.parseBoolean(params.getOrDefault(CrudConstants.DELETED, "false"));
         ElementsRequest req = new ElementsRequest();
         List<ElementJson> reqs = new ArrayList<>();
         if (elementId == null || elementId.isEmpty()) {
-           reqs.addAll(getNodePersistence().findAllByNodeType(projectId, refId, null,JupyterNodeType.NOTEBOOK.getValue()));
+           reqs.addAll(getNodePersistence().findAllByNodeType(projectId, refId, null,JupyterNodeType.NOTEBOOK.getValue(), deleted));
         } else {
             reqs.add((new ElementJson()).setId(elementId));
         }

@@ -4,8 +4,6 @@ import java.util.List;
 import java.util.Optional;
 import org.openmbee.mms.data.domains.global.Project;
 
-import javax.transaction.Transactional;
-
 public interface ProjectDAO {
 
     Optional<Project> findByProjectId(String id);

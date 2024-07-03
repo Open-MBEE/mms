@@ -19,6 +19,7 @@ import org.openmbee.mms.core.objects.ElementsRequest;
 import org.openmbee.mms.core.objects.ElementsResponse;
 import org.openmbee.mms.core.services.NodeChangeInfo;
 import org.openmbee.mms.core.services.NodeGetInfo;
+import org.openmbee.mms.crud.CrudConstants;
 import org.openmbee.mms.crud.domain.JsonDomain;
 import org.openmbee.mms.json.ElementJson;
 import org.openmbee.mms.view.services.PropertyData;
@@ -30,9 +31,10 @@ public class CameoViewService extends CameoNodeService implements ViewService {
 
     @Override
     public ElementsResponse getDocuments(String projectId, String refId, Map<String, String> params) {
+        Boolean deleted = Boolean.parseBoolean(params.getOrDefault(CrudConstants.DELETED, "false"));
         String commitId = params.getOrDefault(CameoConstants.COMMITID, null);
         List<ElementJson> documents = getNodePersistence().findAllByNodeType(projectId, refId,
-            commitId, CameoNodeType.DOCUMENT.getValue());
+            commitId, CameoNodeType.DOCUMENT.getValue(), deleted);
         ElementsResponse res = this.getViews(projectId, refId, buildRequestFromJsons(documents), params);
         for (ElementJson e: res.getElements()) {
             Optional<ElementJson> parent = getFirstRelationshipOfType(projectId, refId, commitId, e,
@@ -83,9 +85,10 @@ public class CameoViewService extends CameoNodeService implements ViewService {
     }
 
     public ElementsResponse getGroups(String projectId, String refId, Map<String, String> params) {
+        Boolean deleted = Boolean.parseBoolean(params.getOrDefault(CrudConstants.DELETED, "false"));
         String commitId = params.getOrDefault(CameoConstants.COMMITID, null);
         List<ElementJson> groups = getNodePersistence().findAllByNodeType(projectId, refId, commitId,
-            CameoNodeType.GROUP.getValue());
+            CameoNodeType.GROUP.getValue(), deleted);
 
         ElementsResponse res = new ElementsResponse().setElements(groups);
         for (ElementJson e: groups) {
@@ -251,7 +254,8 @@ public class CameoViewService extends CameoNodeService implements ViewService {
                 return next;
             }
             nextId = (String)next.get().get(relkey);
-            if (nextId == null || nextId.isEmpty()) {
+            // If there isn't a next or if the nextId would be the project root (would return empty element)
+            if (nextId == null || nextId.isEmpty() || next.get().getId().endsWith(CameoConstants.PROJECT_MODEL_SUFFIX)) {
                 return Optional.empty();
             }
             getInfo = nodePersistence.findById(projectId, refId, commitId, nextId);

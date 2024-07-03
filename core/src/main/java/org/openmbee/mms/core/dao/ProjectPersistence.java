@@ -21,9 +21,9 @@ public interface ProjectPersistence {
 
     Collection<ProjectJson> findAllByOrgId(String orgId);
 
-    void softDelete(String projectId);
+    void archiveById(String projectId);
 
-    void hardDelete(String projectId);
+    void deleteById(String projectId);
 
     boolean inheritsPermissions(String projectId);
 

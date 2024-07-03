@@ -121,12 +121,12 @@
 					"raw": "{\n\t\"username\": \"twcuser\",\n\t\"password\": \"twcuser\"\n}"
 				},
 				"url": {
-					"raw": "{{host}}/user",
+					"raw": "{{host}}/users",
 					"host": [
 						"{{host}}"
 					],
 					"path": [
-						"user"
+						"users"
 					]
 				}
 			},

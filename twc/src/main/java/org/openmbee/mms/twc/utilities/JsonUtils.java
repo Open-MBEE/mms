@@ -1,6 +1,7 @@
 package org.openmbee.mms.twc.utilities;
 
 import org.json.JSONArray;
+import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -33,5 +34,15 @@ public class JsonUtils {
 		}
 		return strList;
 	}
+
+	public JSONObject parseStringtoJsonObject(String restResponse) {
+        JSONObject jsonObj = null;
+
+        jsonObj = new JSONObject(restResponse);
+        if (jsonObj.length() > 0) {
+            return null;
+        }
+        return jsonObj;
+    }
 
 }

@@ -50,12 +50,14 @@ public class ProjectDeleteService {
         });
 
         if(hard){
-            projectPersistence.hardDelete(projectId);
+            projectPersistence.deleteById(projectId);
+            projectJson.setDeleted(true);
         } else {
-            projectPersistence.softDelete(projectId);
+            projectPersistence.archiveById(projectId);
+            projectJson.setIsArchived(true);
         }
 
-        projectJson.setIsDeleted(Constants.TRUE);
+        
         res.add(projectJson);
         return response.setProjects(res);
     }

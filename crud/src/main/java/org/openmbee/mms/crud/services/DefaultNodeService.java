@@ -65,7 +65,7 @@ public class DefaultNodeService implements NodeService {
     @Override
     public void readAsStream(String projectId, String refId, Map<String, String> params, OutputStream stream,
             String accept) throws IOException {
-
+        Boolean deleted = Boolean.parseBoolean(params.getOrDefault(CrudConstants.DELETED, "false"));
         String commitId = params.getOrDefault(CrudConstants.COMMITID, null);
         String resCommitId = commitId;
         if (commitId != null && !commitId.isEmpty()) {
@@ -89,7 +89,7 @@ public class DefaultNodeService implements NodeService {
             separator = ",";
         }
 
-        nodePersistence.streamAllAtCommit(projectId, refId, commitId, stream, separator);
+        nodePersistence.streamAllAtCommit(projectId, refId, commitId, stream, separator, deleted);
 
         if (!"application/x-ndjson".equals(accept)) {
             stream.write("]}".getBytes(StandardCharsets.UTF_8));
@@ -107,6 +107,7 @@ public class DefaultNodeService implements NodeService {
             ElementsRequest req = buildRequest(id);
             return read(projectId, refId, req, params);
         }
+        Boolean deleted = Boolean.parseBoolean(params.getOrDefault(CrudConstants.DELETED, "false"));
         String commitId = params.getOrDefault(CrudConstants.COMMITID, null);
         String resCommitId = commitId;
         if (commitId == null) {
@@ -123,7 +124,7 @@ public class DefaultNodeService implements NodeService {
         ElementsResponse response = new ElementsResponse();
         logger.debug("No ElementId given");
 
-        List<ElementJson> nodes = nodePersistence.findAll(projectId, refId, commitId);
+        List<ElementJson> nodes = nodePersistence.findAll(projectId, refId, commitId, deleted);
         response.getElements().addAll(nodes);
         response.getElements().forEach(v -> v.setRefId(refId));
         response.setCommitId(resCommitId);

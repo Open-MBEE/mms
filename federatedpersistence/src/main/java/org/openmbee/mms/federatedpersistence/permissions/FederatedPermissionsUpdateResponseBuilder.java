@@ -19,7 +19,7 @@ public class FederatedPermissionsUpdateResponseBuilder extends PermissionUpdateR
 
         PermissionUpdateResponse.PermissionUpdate update = new PermissionUpdateResponse.PermissionUpdate(
             action, v.getUser().getUsername(), v.getRole().getName(), v.getOrganization().getOrganizationId(), v.getOrganization().getOrganizationName(),
-            null, null, null, false);
+            null, null, null, null, false);
         doInsert(update);
     }
 
@@ -33,7 +33,7 @@ public class FederatedPermissionsUpdateResponseBuilder extends PermissionUpdateR
 
         PermissionUpdateResponse.PermissionUpdate update = new PermissionUpdateResponse.PermissionUpdate(
             action, v.getGroup().getName(), v.getRole().getName(), v.getOrganization().getOrganizationId(), v.getOrganization().getOrganizationName(),
-            null, null, null, false);
+            null, null, null, null, false);
         doInsert(update);
     }
 
@@ -48,7 +48,7 @@ public class FederatedPermissionsUpdateResponseBuilder extends PermissionUpdateR
         PermissionUpdateResponse.PermissionUpdate update = new PermissionUpdateResponse.PermissionUpdate(
             action, v.getUser().getUsername(), v.getRole().getName(), v.getProject().getOrganization().getOrganizationId(),
             v.getProject().getOrganization().getOrganizationName(), v.getProject().getProjectId(), v.getProject().getProjectName(),
-            null, v.isInherited());
+            null, null, v.isInherited());
         doInsert(update);
     }
 
@@ -63,7 +63,7 @@ public class FederatedPermissionsUpdateResponseBuilder extends PermissionUpdateR
         PermissionUpdateResponse.PermissionUpdate update = new PermissionUpdateResponse.PermissionUpdate(
             action, v.getGroup().getName(), v.getRole().getName(), v.getProject().getOrganization().getOrganizationId(),
             v.getProject().getOrganization().getOrganizationName(), v.getProject().getProjectId(), v.getProject().getProjectName(),
-            null, v.isInherited());
+            null, null, v.isInherited());
         doInsert(update);
     }
 
@@ -78,7 +78,7 @@ public class FederatedPermissionsUpdateResponseBuilder extends PermissionUpdateR
         PermissionUpdateResponse.PermissionUpdate update = new PermissionUpdateResponse.PermissionUpdate(
             action, v.getUser().getUsername(), v.getRole().getName(), v.getBranch().getProject().getOrganization().getOrganizationId(),
             v.getBranch().getProject().getOrganization().getOrganizationName(), v.getBranch().getProject().getProjectId(),
-            v.getBranch().getProject().getProjectName(), v.getBranch().getBranchId(), v.isInherited());
+            v.getBranch().getProject().getProjectName(), v.getBranch().getBranchId(), null, v.isInherited());
         doInsert(update);
     }
 
@@ -93,7 +93,36 @@ public class FederatedPermissionsUpdateResponseBuilder extends PermissionUpdateR
         PermissionUpdateResponse.PermissionUpdate update = new PermissionUpdateResponse.PermissionUpdate(
             action, v.getGroup().getName(), v.getRole().getName(), v.getBranch().getProject().getOrganization().getOrganizationId(),
             v.getBranch().getProject().getOrganization().getOrganizationName(), v.getBranch().getProject().getProjectId(),
-            v.getBranch().getProject().getProjectName(),v.getBranch().getBranchId(), v.isInherited());
+            v.getBranch().getProject().getProjectName(),v.getBranch().getBranchId(), null, v.isInherited());
         doInsert(update);
     }
+
+    public void insertPermissionUpdates_GroupUserPerm(PermissionUpdateResponse.Action action, Collection<GroupUserPerm> perms) {
+        perms.forEach(v -> insertPermissionUpdate(action, v));
+    }
+
+    public void insertPermissionUpdate(PermissionUpdateResponse.Action action, GroupUserPerm v) {
+        if(v == null)
+            return;
+
+        PermissionUpdateResponse.PermissionUpdate update = new PermissionUpdateResponse.PermissionUpdate(
+            action, v.getUser().getUsername(), v.getRole().getName(),null,null,null,null,
+             null, v.getGroup().getName(), false);
+        doInsert(update);
+    }
+
+    public void insertPermissionUpdates_GroupGroupPerm(PermissionUpdateResponse.Action action, Collection<GroupGroupPerm> perms) {
+        perms.forEach(v -> insertPermissionUpdate(action, v));
+    }
+
+    public void insertPermissionUpdate(PermissionUpdateResponse.Action action, GroupGroupPerm v) {
+        if(v == null)
+            return;
+
+        PermissionUpdateResponse.PermissionUpdate update = new PermissionUpdateResponse.PermissionUpdate(
+            action, v.getGroup().getName(), v.getRole().getName(),null,null,null,null,
+             null, v.getGroup().getName(), false);
+        doInsert(update);
+    }
+    
 }

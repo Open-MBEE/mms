@@ -80,7 +80,7 @@ public class FederatedNodeChangeDomain extends NodeChangeDomain {
 
         Node node = new Node();
         node.setNodeId(element.getId());
-
+        
         ((FederatedNodeChangeInfo) info).getExistingNodeMap().put(element.getId(), node);
         super.processElementAdded(info, element);
 
@@ -107,7 +107,9 @@ public class FederatedNodeChangeDomain extends NodeChangeDomain {
             previousDocId = n.getDocId();
             ((FederatedNodeChangeInfo) info).getOldDocIds().add(previousDocId);
             if(n.isDeleted()) {
-                existing.setIsDeleted(Constants.TRUE);
+                existing.setIsArchived(true);
+            } else {
+                existing.setIsArchived(false);
             }
         } else {
             return false;

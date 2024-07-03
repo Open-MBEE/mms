@@ -10,3 +10,7 @@ elasticsearch.limit.index=5000
 #Optional Elasticsearch Basic Authentication Credentials
 elasticsearch.username=
 elasticsearch.password=
+
+#Optional Elasticsearch Truststore Configuration
+elasticsearch.truststore=
+elasticsearch.storepass=

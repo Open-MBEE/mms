@@ -287,7 +287,7 @@ public class DefaultOrgPermissionsDelegate extends AbstractDefaultPermissionsDel
     @Override
     public PermissionUpdatesResponse recalculateInheritedPerms() {
         //Do nothing, can't inherit permissions
-        return new PermissionUpdatesResponseBuilder().getPermissionUpdatesReponse();
+        return new PermissionUpdatesResponseBuilder().getPermissionUpdatesResponse();
     }
 
 }

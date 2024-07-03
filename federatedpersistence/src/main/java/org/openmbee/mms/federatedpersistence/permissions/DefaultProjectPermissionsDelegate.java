@@ -420,6 +420,6 @@ public class DefaultProjectPermissionsDelegate extends AbstractDefaultPermission
         projectGroupPermRepo.saveAll(groupPermissions.getAll());
         responseBuilder.getGroups().insertPermissionUpdates_ProjectGroupPerm(PermissionUpdateResponse.Action.ADD, groupPermissions.getAll());
 
-        return responseBuilder.getPermissionUpdatesReponse();
+        return responseBuilder.getPermissionUpdatesResponse();
     }
 }

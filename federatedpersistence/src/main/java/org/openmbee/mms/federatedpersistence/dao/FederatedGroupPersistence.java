@@ -1,6 +1,7 @@
 package org.openmbee.mms.federatedpersistence.dao;
 
 import org.openmbee.mms.core.dao.GroupPersistence;
+import org.openmbee.mms.core.exceptions.NotFoundException;
 import org.openmbee.mms.data.domains.global.Group;
 import org.openmbee.mms.federatedpersistence.utils.FederatedJsonUtils;
 import org.openmbee.mms.json.GroupJson;
@@ -34,6 +35,7 @@ public class FederatedGroupPersistence implements GroupPersistence {
     public GroupJson save(GroupJson groupJson) {
         Group groupObj = new Group();
         groupObj.setName(groupJson.getName());
+        groupObj.setType(groupJson.getType());
         Group saved = groupRepository.saveAndFlush(groupObj);
         return getJson(saved);
     }
@@ -60,5 +62,14 @@ public class FederatedGroupPersistence implements GroupPersistence {
         GroupJson json = new GroupJson();
         json.merge(jsonUtils.convertToMap(saved));
         return json;
+    }
+
+    @Override
+    public boolean hasPublicPermissions(String groupName) {
+        Optional<Group> group = groupRepository.findByName(groupName);
+        if (group.isEmpty()) {
+            throw new NotFoundException("group " + groupName + " not found");
+        }
+        return group.get().isPublic();
     }
 }

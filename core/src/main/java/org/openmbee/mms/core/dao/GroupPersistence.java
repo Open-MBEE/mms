@@ -11,4 +11,5 @@ public interface GroupPersistence {
     void delete(GroupJson groupJson);
     Optional<GroupJson> findByName(String name);
     Collection<GroupJson> findAll();
+    boolean hasPublicPermissions(String projectId);
 }

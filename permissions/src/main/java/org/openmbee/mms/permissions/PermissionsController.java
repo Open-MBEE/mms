@@ -42,7 +42,7 @@ public class PermissionsController {
         if (req.getPublic() != null) {
             responseBuilder.setPublic(permissionService.setOrgPublic(req.getPublic(), orgId));
         }
-        return responseBuilder.getPermissionUpdatesReponse();
+        return responseBuilder.getPermissionUpdatesResponse();
     }
 
     @PostMapping(value = "/projects/{projectId}/permissions", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -65,7 +65,7 @@ public class PermissionsController {
         if (req.getInherit() != null) {
             responseBuilder.insert(permissionService.setProjectInherit(req.getInherit(), projectId));
         }
-        return responseBuilder.getPermissionUpdatesReponse();
+        return responseBuilder.getPermissionUpdatesResponse();
     }
 
     @PostMapping(value = "/projects/{projectId}/refs/{refId}/permissions", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -86,7 +86,27 @@ public class PermissionsController {
         if (req.getInherit() != null) {
             responseBuilder.insert(permissionService.setBranchInherit(req.getInherit(), projectId, refId));
         }
-        return responseBuilder.getPermissionUpdatesReponse();
+        return responseBuilder.getPermissionUpdatesResponse();
+    }
+
+    @PostMapping(value = "/groups/{group}/permissions", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("@mss.hasGroupPrivilege(authentication, #group, 'GROUP_UPDATE_PERMISSIONS', false)")
+    public PermissionUpdatesResponse updateGroupPermissions(
+        @PathVariable String group,
+        @RequestBody PermissionsRequest req) {
+
+        PermissionUpdatesResponseBuilder responseBuilder = new PermissionUpdatesResponseBuilder();
+
+        if (req.getGroups() != null) {
+            responseBuilder.insert(permissionService.updateGroupGroupPerms(req.getGroups(), group));
+        }
+        if (req.getUsers() != null) {
+            responseBuilder.insert(permissionService.updateGroupUserPerms(req.getUsers(), group));
+        }
+        if (req.getPublic() != null) {
+            responseBuilder.setPublic(permissionService.setGroupPublic(req.getPublic(), group));
+        }
+        return responseBuilder.getPermissionUpdatesResponse();
     }
 
     @GetMapping(value = "/orgs/{orgId}/permissions")
@@ -127,4 +147,17 @@ public class PermissionsController {
         res.setInherit(permissionService.isBranchInherit(projectId, refId));
         return res;
     }
+
+    @GetMapping(value = "/groups/{group}/permissions")
+    @PreAuthorize("@mss.hasGroupPrivilege(authentication, #group, 'GROUP_READ_PERMISSIONS', true)")
+    public PermissionsResponse getGroupPermissions(
+        @PathVariable String group) {
+
+        PermissionsResponse res = new PermissionsResponse();
+        res.setGroups(permissionService.getGroupGroupRoles(group));
+        res.setUsers(permissionService.getGroupUserRoles(group));
+        res.setPublic(permissionService.isGroupPublic(group));
+        return res;
+    }
+
 }

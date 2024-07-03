@@ -4,6 +4,7 @@ import org.openmbee.mms.core.delegation.PermissionsDelegate;
 import org.openmbee.mms.core.delegation.PermissionsDelegateFactory;
 import org.openmbee.mms.core.exceptions.InternalErrorException;
 import org.openmbee.mms.core.services.DefaultPermissionService;
+import org.openmbee.mms.json.GroupJson;
 import org.openmbee.mms.json.OrgJson;
 import org.openmbee.mms.json.ProjectJson;
 import org.openmbee.mms.json.RefJson;
@@ -66,5 +67,18 @@ public class PermissionsDelegateUtil {
                 (branch.getRefId() == null ? "?" : branch.getRefId()) +
                 " of project " +
                 (branch.getProjectId() == null ? "?" : branch.getProjectId()));
+    }
+
+    public PermissionsDelegate getPermissionsDelegate(final GroupJson group) {
+        Optional<PermissionsDelegate> permissionsDelegate = permissionsDelegateFactories.stream()
+            .map(v -> v.getPermissionsDelegate(group)).filter(Objects::nonNull).findFirst();
+
+        if(permissionsDelegate.isPresent()) {
+            return permissionsDelegate.get();
+        }
+
+        throw new InternalErrorException(
+            "No valid permissions scheme found for group " + group.getName()
+                + " (" + group.getName() + ")");
     }
 }

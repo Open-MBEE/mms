@@ -5,6 +5,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
 import org.openmbee.mms.core.dao.BranchPersistence;
+import org.openmbee.mms.core.dao.GroupPersistence;
 import org.openmbee.mms.core.dao.ProjectPersistence;
 import org.openmbee.mms.core.exceptions.NotFoundException;
 import org.openmbee.mms.core.config.ContextHolder;
@@ -14,6 +15,7 @@ import org.openmbee.mms.core.utils.AuthenticationUtils;
 import org.openmbee.mms.json.OrgJson;
 import org.openmbee.mms.json.ProjectJson;
 import org.openmbee.mms.json.RefJson;
+import org.openmbee.mms.json.GroupJson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -26,6 +28,7 @@ public class MethodSecurityService {
     private ProjectPersistence projectPersistence;
     private BranchPersistence branchPersistence;
     private OrgPersistence orgPersistence;
+    private GroupPersistence groupPersistence;
 
     @Autowired
     public void setPermissionService(PermissionService permissionService) {
@@ -45,6 +48,11 @@ public class MethodSecurityService {
     @Autowired
     public void setBranchPersistence(BranchPersistence branchPersistence) {
         this.branchPersistence = branchPersistence;
+    }
+
+    @Autowired
+    public void setGroupPersistence(GroupPersistence groupPersistence) {
+        this.groupPersistence = groupPersistence;
     }
 
     public boolean hasOrgPrivilege(Authentication authentication, String orgId, String privilege, boolean allowAnonIfPublic) {
@@ -104,6 +112,25 @@ public class MethodSecurityService {
         return completeFutures(permissionsFuture, existsFuture, "Branch");
     }
 
+    public boolean hasGroupPrivilege(Authentication authentication, String groupName, String privilege, boolean allowAnonIfPublic) {
+        CompletableFuture<Boolean> permissionsFuture = CompletableFuture.supplyAsync(() ->
+        {
+            if (allowAnonIfPublic && permissionService.isGroupPublic(groupName)) {
+                return true;
+            }
+            if (authentication == null || authentication instanceof AnonymousAuthenticationToken) {
+                return false;
+            }
+            if (permissionService.hasGroupPrivilege(privilege, authentication.getName(), AuthenticationUtils.getGroups(authentication), groupName)) {
+                return true;
+            }
+            return false;
+        });
+
+        CompletableFuture<Boolean> existsFuture = CompletableFuture.supplyAsync(() -> groupExists(groupName));
+        return completeFutures(permissionsFuture, existsFuture, "Group");
+    }
+
     private boolean orgExists(String orgId) {
         Optional<OrgJson> o = orgPersistence.findById(orgId);
         return o.isPresent();
@@ -121,6 +148,11 @@ public class MethodSecurityService {
         }
         Optional<RefJson> branchesOption = branchPersistence.findById(projectId, branchId);
         return branchesOption.isPresent();
+    }
+
+    private boolean groupExists(String groupName) {
+        Optional<GroupJson> g = groupPersistence.findByName(groupName);
+        return g.isPresent();
     }
 
     private boolean completeFutures(CompletableFuture<Boolean> permissionsFuture, CompletableFuture<Boolean> existsFuture, String context) {

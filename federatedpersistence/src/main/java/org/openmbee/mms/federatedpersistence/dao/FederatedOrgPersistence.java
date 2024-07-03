@@ -2,11 +2,15 @@ package org.openmbee.mms.federatedpersistence.dao;
 
 import org.openmbee.mms.core.exceptions.ForbiddenException;
 import org.openmbee.mms.data.dao.OrgDAO;
+import org.openmbee.mms.core.config.Constants;
+import org.openmbee.mms.core.config.ContextHolder;
 import org.openmbee.mms.core.dao.OrgPersistence;
 import org.openmbee.mms.core.exceptions.NotFoundException;
 import org.openmbee.mms.data.domains.global.Organization;
+import org.openmbee.mms.data.domains.global.Project;
 import org.openmbee.mms.federatedpersistence.utils.FederatedJsonUtils;
 import org.openmbee.mms.json.OrgJson;
+import org.openmbee.mms.json.ProjectJson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -36,6 +40,9 @@ public class FederatedOrgPersistence implements OrgPersistence {
         Organization organization = organizationOptional.orElse(new Organization());
         organization.setOrganizationId(orgJson.getId());
         organization.setOrganizationName(orgJson.getName());
+        if (orgJson.isArchived() != null) {
+            organization.setDeleted(orgJson.isArchived());
+        }
         return getOrgJson(orgDAO.save(organization));
     }
 
@@ -50,13 +57,27 @@ public class FederatedOrgPersistence implements OrgPersistence {
     }
 
     @Override
-    public OrgJson deleteById(String orgId) {
+    public void deleteById(String orgId) {
         Optional<Organization> organization = orgDAO.findByOrganizationId(orgId);
         if(organization.isEmpty()) {
             throw new NotFoundException(getOrgNotFoundMessage(orgId));
         }
         orgDAO.delete(organization.get());
-        return getOrgJson(organization.get());
+    }
+
+    @Override
+    public void archiveById(String orgId) {
+        //TODO not called locally, otherwise delete
+        ContextHolder.setContext(orgId);
+        Optional<Organization> org = orgDAO.findByOrganizationId(orgId);
+
+        if (org.isEmpty()) {
+            throw new NotFoundException("Org state is invalid, cannot delete.");
+        }
+        
+        Organization p = org.get();
+        p.setDeleted(true);
+        orgDAO.save(p);
     }
 
     @Override
@@ -71,6 +92,8 @@ public class FederatedOrgPersistence implements OrgPersistence {
     protected OrgJson getOrgJson(Organization organization) {
         OrgJson orgJson = new OrgJson();
         orgJson.merge(jsonUtils.convertToMap(organization));
+        orgJson.setIsArchived(organization.isDeleted());
+        orgJson.remove(OrgJson.DELETED);
         return orgJson;
     }
 

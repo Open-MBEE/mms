@@ -4,11 +4,12 @@ import org.openmbee.mms.core.config.Privileges;
 
 public class PermissionLookup {
 
-    public enum Type {ORG, PROJECT, BRANCH;}
+    public enum Type {ORG, PROJECT, BRANCH, GROUP;}
     private Type type;
     private String orgId;
     private String projectId;
     private String refId;
+    private String groupName;
     private Privileges privilege;
     private boolean allowAnonIfPublic;
     private boolean hasPrivilege;
@@ -52,6 +53,10 @@ public class PermissionLookup {
     public void setRefId(String refId) {
         this.refId = refId;
     }
+
+    public String getGroupName() { return groupName; }
+
+    public void setGroupName(String groupName) { this.groupName = groupName; }
 
     public Privileges getPrivilege() {
         return privilege;

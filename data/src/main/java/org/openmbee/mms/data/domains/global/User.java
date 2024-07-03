@@ -3,6 +3,8 @@ package org.openmbee.mms.data.domains.global;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 import javax.persistence.*;
 
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
@@ -11,7 +13,9 @@ import javax.persistence.*;
     @UniqueConstraint(columnNames = "email")})
 public class User extends Base {
 
+    @Column(unique = true)
     private String username;
+
     private String email;
     private String firstName;
     private String lastName;
@@ -35,18 +39,23 @@ public class User extends Base {
 
     @JsonIgnore
     @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(name = "users_groups", joinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id"), inverseJoinColumns = @JoinColumn(name = "group_id", referencedColumnName = "id"))
-    private Collection<Group> groups;
+    @JoinTable(name = "users_groups", joinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id"), inverseJoinColumns = @JoinColumn(name = "group_id", referencedColumnName = "id"), uniqueConstraints=@UniqueConstraint(columnNames={"user_id","group_id"}))
+    private Set<Group> groups;
+
+    private String type;
 
     public User() {
+        this.groups = new HashSet<>();
     }
 
     public User(String email, String username, String password, String firstName, String lastName, boolean admin) {
         this.email = email;
+        this.username = username;
         this.password = password;
         this.firstName = firstName;
         this.lastName = lastName;
         this.admin = admin;
+        this.groups = new HashSet<>();
     }
 
     public String getUsername() {
@@ -56,7 +65,7 @@ public class User extends Base {
     public void setUsername(String username) {
         this.username = username;
     }
-
+    
     public String getEmail() {
         return email;
     }
@@ -133,7 +142,7 @@ public class User extends Base {
         return groups;
     }
 
-    public void setGroups(Collection<Group> groups) {
+    public void setGroups(Set<Group> groups) {
         this.groups = groups;
     }
 
@@ -144,4 +153,13 @@ public class User extends Base {
     public void setAdmin(boolean admin) {
         this.admin = admin;
     }
+
+    public String getType() {
+        return this.type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
 }

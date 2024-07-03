@@ -8,11 +8,14 @@ import org.openmbee.mms.core.delegation.PermissionsDelegate;
 import org.openmbee.mms.core.delegation.PermissionsDelegateFactory;
 import org.openmbee.mms.core.exceptions.NotFoundException;
 import org.openmbee.mms.data.domains.global.Branch;
+import org.openmbee.mms.data.domains.global.Group;
 import org.openmbee.mms.data.domains.global.Organization;
 import org.openmbee.mms.data.domains.global.Project;
+import org.openmbee.mms.json.GroupJson;
 import org.openmbee.mms.json.OrgJson;
 import org.openmbee.mms.json.ProjectJson;
 import org.openmbee.mms.json.RefJson;
+import org.openmbee.mms.rdb.repositories.GroupRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 
@@ -24,6 +27,7 @@ public class DefaultFederatedPermissionsDelegateFactory implements PermissionsDe
     private ProjectDAO projectDAO;
     private BranchGDAO branchDAO;
     private OrgDAO orgDAO;
+    private GroupRepository groupRepository;
 
     @Autowired
     public void setApplicationContext(ApplicationContext applicationContext) {
@@ -43,6 +47,11 @@ public class DefaultFederatedPermissionsDelegateFactory implements PermissionsDe
     @Autowired
     public void setOrgDAO(OrgDAO orgDAO) {
         this.orgDAO = orgDAO;
+    }
+
+    @Autowired
+    public void setGroupRepository(GroupRepository groupRepository) {
+        this.groupRepository = groupRepository;
     }
 
     @Override
@@ -73,5 +82,14 @@ public class DefaultFederatedPermissionsDelegateFactory implements PermissionsDe
             throw new NotFoundException("branch not found");
         }
         return applicationContext.getBean(DefaultBranchPermissionsDelegate.class, branchOptional.get());
+    }
+
+    @Override
+    public PermissionsDelegate getPermissionsDelegate(GroupJson group) {
+        Optional<Group> groupOptional = groupRepository.findByName(group.getName());
+        if(groupOptional.isEmpty()) {
+            throw new NotFoundException("group not found");
+        }
+        return applicationContext.getBean(DefaultGroupPermissionsDelegate.class, groupOptional.get());
     }
 }

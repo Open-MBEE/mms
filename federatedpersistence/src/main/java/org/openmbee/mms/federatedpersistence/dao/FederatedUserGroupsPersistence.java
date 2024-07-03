@@ -1,5 +1,6 @@
 package org.openmbee.mms.federatedpersistence.dao;
 
+import org.openmbee.mms.core.config.AuthorizationConstants;
 import org.openmbee.mms.core.dao.UserGroupsPersistence;
 import org.openmbee.mms.data.domains.global.Group;
 import org.openmbee.mms.data.domains.global.User;
@@ -83,8 +84,11 @@ public class FederatedUserGroupsPersistence implements UserGroupsPersistence {
     @Override
     @Transactional
     public Collection<UserJson> findUsersInGroup(String groupName) {
+        if (groupName.equals(AuthorizationConstants.EVERYONE)) { 
+            return userRepository.findAll().stream().map(this::getJson).collect(Collectors.toList()); 
+        }
         Optional<Group> groupOptional = groupRepository.findByName(groupName);
-        if(groupOptional.isEmpty()){
+        if(groupOptional.isEmpty()) {
             return List.of();
         }
         return groupOptional.get().getUsers().stream().map(this::getJson).collect(Collectors.toList());
